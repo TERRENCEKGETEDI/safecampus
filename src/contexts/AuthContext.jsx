@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { sampleUsers, sampleForumPosts, sampleComments, additionalAppointments, appointments } from '../components/counselingData.js';
 
 const AuthContext = createContext();
 
@@ -10,6 +11,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Initialize sample users if not present
+    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    if (existingUsers.length === 0) {
+      localStorage.setItem('users', JSON.stringify(sampleUsers));
+    }
+
+    // Initialize forum posts if not present
+    const existingPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
+    if (existingPosts.length === 0) {
+      localStorage.setItem('forumPosts', JSON.stringify(sampleForumPosts));
+    }
+
+    // Initialize comments if not present
+    const existingComments = JSON.parse(localStorage.getItem('comments') || '[]');
+    if (existingComments.length === 0) {
+      localStorage.setItem('comments', JSON.stringify(sampleComments));
+    }
+
+    // Initialize appointments if not present
+    const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    if (existingAppointments.length === 0) {
+      localStorage.setItem('appointments', JSON.stringify([...appointments, ...additionalAppointments]));
+    }
+
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     if (storedToken && storedUser) {

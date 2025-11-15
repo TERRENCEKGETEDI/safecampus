@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { sampleUsers } from './counselingData.js';
 
 const Forum = () => {
   const { user } = useAuth();
@@ -9,6 +10,12 @@ const Forum = () => {
   const [newComment, setNewComment] = useState({});
   const [postErrors, setPostErrors] = useState({});
   const [commentErrors, setCommentErrors] = useState({});
+
+  const getUserName = (userId) => {
+    if (!userId) return 'Anonymous';
+    const user = sampleUsers.find(u => u.id === userId);
+    return user ? user.name : 'Unknown User';
+  };
 
   useEffect(() => {
     const storedPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
@@ -77,63 +84,114 @@ const Forum = () => {
   };
 
   return (
-    <div>
-      <h2>Community Forum</h2>
-      <div>
-        <div>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '30px' }}>Community Forum</h2>
+
+      {/* Create Post Section */}
+      <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '10px', marginBottom: '30px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <h3 style={{ marginBottom: '15px', color: '#333' }}>Share Your Thoughts</h3>
+        <div style={{ marginBottom: '10px' }}>
           <input
             type="text"
-            placeholder="Title"
+            placeholder="What's on your mind?"
             value={newPost.title}
             onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+            style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
           />
-          {postErrors.title && <span style={{ color: 'red' }}>{postErrors.title}</span>}
+          {postErrors.title && <span style={{ color: 'red', fontSize: '12px' }}>{postErrors.title}</span>}
         </div>
-        <div>
+        <div style={{ marginBottom: '10px' }}>
           <textarea
-            placeholder="Body"
+            placeholder="Tell us more..."
             value={newPost.body}
             onChange={(e) => setNewPost({ ...newPost, body: e.target.value })}
+            rows="3"
+            style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px', resize: 'vertical' }}
           />
-          {postErrors.body && <span style={{ color: 'red' }}>{postErrors.body}</span>}
+          {postErrors.body && <span style={{ color: 'red', fontSize: '12px' }}>{postErrors.body}</span>}
         </div>
-        <select value={newPost.category} onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}>
-          <option value="general">General</option>
-          <option value="support">Support</option>
-          <option value="advice">Advice</option>
-        </select>
-        <label>
-          <input
-            type="checkbox"
-            checked={newPost.isAnonymous}
-            onChange={(e) => setNewPost({ ...newPost, isAnonymous: e.target.checked })}
-          />
-          Anonymous
-        </label>
-        <button onClick={handleAddPost} disabled={!newPost.title.trim() || !newPost.body.trim()}>Post</button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
+          <select value={newPost.category} onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+                  style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '5px' }}>
+            <option value="general">General</option>
+            <option value="support">Support</option>
+            <option value="advice">Advice</option>
+          </select>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <input
+              type="checkbox"
+              checked={newPost.isAnonymous}
+              onChange={(e) => setNewPost({ ...newPost, isAnonymous: e.target.checked })}
+            />
+            Post anonymously
+          </label>
+        </div>
+        <button onClick={handleAddPost} disabled={!newPost.title.trim() || !newPost.body.trim()}
+                style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}>
+          Post
+        </button>
       </div>
+
+      {/* Posts Feed */}
       <div>
         {posts.map(post => (
-          <div key={post.id} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
-            <h3>{post.title}</h3>
-            <p>{post.body}</p>
-            <small>Category: {post.category} | Likes: {post.likes} | {post.createdAt}</small>
-            <button onClick={() => handleLike(post.id)}>Like</button>
-            <button onClick={() => handleReport(post.id)}>Report</button>
-            <div>
-              <textarea
-                placeholder="Add comment"
-                value={newComment[post.id] || ''}
-                onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
-              />
-              {commentErrors[post.id] && <span style={{ color: 'red' }}>{commentErrors[post.id]}</span>}
-              <button onClick={() => handleAddComment(post.id)} disabled={! (newComment[post.id] || '').trim()}>Comment</button>
+          <div key={post.id} style={{ backgroundColor: 'white', borderRadius: '10px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            {/* Post Header */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#007bff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', marginRight: '10px' }}>
+                {getUserName(post.authorId).charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 'bold', color: '#333' }}>{getUserName(post.authorId)}</div>
+                <div style={{ fontSize: '12px', color: '#666' }}>{new Date(post.createdAt).toLocaleString()}</div>
+              </div>
+              <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#666', backgroundColor: '#f0f0f0', padding: '4px 8px', borderRadius: '10px' }}>
+                {post.category}
+              </div>
             </div>
-            <div>
+
+            {/* Post Content */}
+            <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>{post.title}</h4>
+            <p style={{ margin: '0 0 15px 0', color: '#555', lineHeight: '1.5' }}>{post.body}</p>
+
+            {/* Post Actions */}
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+              <button onClick={() => handleLike(post.id)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>
+                👍 {post.likes} Likes
+              </button>
+              <button onClick={() => handleReport(post.id)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}>
+                🚩 Report
+              </button>
+            </div>
+
+            {/* Comments Section */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <textarea
+                  placeholder="Write a comment..."
+                  value={newComment[post.id] || ''}
+                  onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
+                  rows="2"
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '5px', resize: 'vertical' }}
+                />
+                {commentErrors[post.id] && <span style={{ color: 'red', fontSize: '12px' }}>{commentErrors[post.id]}</span>}
+                <button onClick={() => handleAddComment(post.id)} disabled={! (newComment[post.id] || '').trim()}
+                        style={{ marginTop: '5px', backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '5px', cursor: 'pointer' }}>
+                  Comment
+                </button>
+              </div>
+
+              {/* Display Comments */}
               {comments.filter(c => c.postId === post.id).map(comment => (
-                <div key={comment.id} style={{ marginLeft: '20px', borderLeft: '1px solid #ccc', paddingLeft: '10px' }}>
-                  <p>{comment.body}</p>
-                  <small>{comment.createdAt}</small>
+                <div key={comment.id} style={{ backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '5px', marginBottom: '10px', borderLeft: '3px solid #007bff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                    <div style={{ width: '25px', height: '25px', backgroundColor: '#6c757d', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold', marginRight: '8px' }}>
+                      {getUserName(comment.authorId).charAt(0).toUpperCase()}
+                    </div>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>{getUserName(comment.authorId)}</span>
+                    <span style={{ fontSize: '12px', color: '#666', marginLeft: '10px' }}>{new Date(comment.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p style={{ margin: '0', color: '#555', fontSize: '14px' }}>{comment.body}</p>
                 </div>
               ))}
             </div>

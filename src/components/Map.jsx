@@ -8,12 +8,11 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import {
   campusBounds,
   buildings,
-  gates,
+  buildingFloorPlans,
+  securityLocations,
   safeZones,
-  securityOffices,
   highTrafficAreas,
-  crowdDensityData,
-  campusPaths
+  crowdDensityData
 } from './campusData.js';
 
 // Fix default markers
@@ -59,6 +58,12 @@ const Map = () => {
   const [heatLayer, setHeatLayer] = useState(null);
   const [showCrowdDensity, setShowCrowdDensity] = useState(true);
   const [activeRoute, setActiveRoute] = useState(null);
+  const [currentFloor, setCurrentFloor] = useState('ground');
+  const [helpRequests, setHelpRequests] = useState([]);
+  const [activeHelpRequest, setActiveHelpRequest] = useState(null);
+  const [securityLocations, setSecurityLocations] = useState([]);
+  const [viewMode, setViewMode] = useState('campus'); // 'campus' or 'building'
+  const [selectedBuilding, setSelectedBuilding] = useState(null);
   const mapRef = useRef(null);
 
   // Existing loadshedding state
@@ -89,19 +94,54 @@ const Map = () => {
     setLoadsheddingSchedule(schedule);
     checkCurrentLoadshedding(schedule);
 
-    // Get user location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation([position.coords.latitude, position.coords.longitude]);
-        },
-        (error) => {
-          console.log('Geolocation error:', error);
-          // Fallback to campus center
-          setUserLocation([-26.190, 28.030]);
+    // Load help requests
+    const requests = JSON.parse(localStorage.getItem('helpRequests') || '[]');
+    setHelpRequests(requests);
+
+    // Initialize security locations
+    setSecurityLocations([
+      { id: 'security_office', name: 'Security Office', floor: 'ground', coordinates: [10, 87.5], type: 'stationary' },
+      { id: 'security_guard_1', name: 'Security Guard 1', floor: 'ground', coordinates: [50, 25], type: 'mobile' }
+    ]);
+
+    // Get user location (simulated)
+    // In real app, this would use GPS for campus and indoor positioning for buildings
+    const simulateLocation = () => {
+      if (viewMode === 'campus') {
+        // Random location on campus
+        const lat = -26.200 + Math.random() * 0.010; // Within campus bounds
+        const lng = 28.020 + Math.random() * 0.020;
+        setUserLocation([lat, lng]);
+      } else {
+        // Random location within current building
+        const x = Math.random() * 80 + 10; // 10-90 range
+        const y = Math.random() * 80 + 10; // 10-90 range
+        setUserLocation([x, y]);
+      }
+    };
+
+    simulateLocation();
+
+    // Simulate security guard movement
+    const interval = setInterval(() => {
+      setSecurityLocations(prev => prev.map(guard => {
+        if (guard.type === 'mobile') {
+          // Simulate guard movement
+          const newX = guard.coordinates[0] + (Math.random() - 0.5) * 10;
+          const newY = guard.coordinates[1] + (Math.random() - 0.5) * 10;
+          return {
+            ...guard,
+            coordinates: [
+              Math.max(0, Math.min(100, newX)),
+              Math.max(0, Math.min(100, newY))
+            ]
+          };
         }
-      );
-    }
+        return guard;
+      }));
+    }, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const checkCurrentLoadshedding = (schedule) => {
@@ -195,46 +235,124 @@ const Map = () => {
     return nearest;
   };
 
-  // Contact Security feature for students
-  const handleContactSecurity = () => {
+  // Request Help feature for students
+  const handleRequestHelp = () => {
     if (!userLocation) {
-      alert('Unable to get your location. Please enable GPS.');
+      alert('Unable to determine your location.');
       return;
     }
 
-    const nearestSecurity = findNearestSecurity(userLocation);
-    if (nearestSecurity) {
-      const distance = calculateDistance(userLocation, nearestSecurity.coordinates);
-      const estimatedTime = Math.round(distance / 80 * 60); // Assuming 80m/min walking speed
+    if (viewMode !== 'building' || !selectedBuilding) {
+      alert('Please navigate to a building interior to request help.');
+      return;
+    }
 
-      // Create route
-      if (routingControl) {
-        mapRef.current.removeControl(routingControl);
-      }
+    const requestId = Date.now().toString();
+    const newRequest = {
+      id: requestId,
+      userId: user.id,
+      userName: user.name || 'Student',
+      location: userLocation,
+      building: selectedBuilding.id,
+      floor: currentFloor,
+      timestamp: new Date().toISOString(),
+      status: 'pending', // pending, accepted, completed
+      assignedSecurity: null
+    };
 
-      const newRoutingControl = L.Routing.control({
-        waypoints: [
-          L.latLng(userLocation[0], userLocation[1]),
-          L.latLng(nearestSecurity.coordinates[0], nearestSecurity.coordinates[1])
-        ],
-        routeWhileDragging: false,
-        createMarker: () => null, // Don't create default markers
-        lineOptions: {
-          styles: [{ color: 'blue', weight: 4 }]
-        }
-      }).addTo(mapRef.current);
+    // Add to help requests
+    const updatedRequests = [...helpRequests, newRequest];
+    setHelpRequests(updatedRequests);
+    localStorage.setItem('helpRequests', JSON.stringify(updatedRequests));
 
-      setRoutingControl(newRoutingControl);
-      setActiveRoute({ type: 'security', destination: nearestSecurity });
+    // Notify security (in real app, this would send push notifications)
+    alert('Help request sent! Security has been notified and will meet you at a central location.');
 
-      // Accessibility: Text-to-speech
-      const message = `Route to ${nearestSecurity.name}. Distance: ${Math.round(distance)} meters. Estimated time: ${estimatedTime} minutes.`;
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(message);
-        window.speechSynthesis.speak(utterance);
-      }
+    // Simulate security accepting request
+    setTimeout(() => {
+      const acceptedRequest = { ...newRequest, status: 'accepted', assignedSecurity: 'security_guard_1' };
+      const updated = helpRequests.map(req =>
+        req.id === requestId ? acceptedRequest : req
+      );
+      setHelpRequests(updated);
+      setActiveHelpRequest(acceptedRequest);
+      localStorage.setItem('helpRequests', JSON.stringify(updated));
 
-      alert(message);
+      // Calculate meeting point
+      calculateMeetingPoint(acceptedRequest);
+    }, 2000);
+  };
+
+  // Calculate meeting point in the middle
+  const calculateMeetingPoint = (request) => {
+    const securityGuard = securityLocations.find(s => s.id === request.assignedSecurity);
+    if (!securityGuard) return;
+
+    const userPos = request.location;
+    const securityPos = securityGuard.coordinates;
+
+    // Calculate midpoint
+    const meetingPoint = [
+      (userPos[0] + securityPos[0]) / 2,
+      (userPos[1] + securityPos[1]) / 2
+    ];
+
+    // Create routes for both parties
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+    }
+
+    // Route for user to meeting point (simple polyline for indoor navigation)
+    const userRoute = L.polyline([userPos, meetingPoint], {
+      color: 'blue',
+      weight: 4,
+      opacity: 0.8
+    }).addTo(mapRef.current);
+
+    // Route for security to meeting point
+    const securityRoute = L.polyline([securityPos, meetingPoint], {
+      color: 'red',
+      weight: 4,
+      opacity: 0.8
+    }).addTo(mapRef.current);
+
+    setRoutingControl([userRoute, securityRoute]);
+    setActiveRoute({
+      type: 'meeting',
+      meetingPoint,
+      userRoute,
+      securityRoute
+    });
+
+    // Accessibility announcement
+    const message = `Meeting point calculated. Both you and security are navigating to the central location.`;
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(message);
+      window.speechSynthesis.speak(utterance);
+    }
+
+    alert(`Meeting point set at coordinates (${meetingPoint[0].toFixed(1)}, ${meetingPoint[1].toFixed(1)}). Both parties are navigating there.`);
+  };
+
+  // Accept help request (for security)
+  const handleAcceptHelpRequest = (requestId) => {
+    const request = helpRequests.find(r => r.id === requestId);
+    if (request) {
+      const acceptedRequest = {
+        ...request,
+        status: 'accepted',
+        assignedSecurity: user.id
+      };
+      const updated = helpRequests.map(req =>
+        req.id === requestId ? acceptedRequest : req
+      );
+      setHelpRequests(updated);
+      setActiveHelpRequest(acceptedRequest);
+      localStorage.setItem('helpRequests', JSON.stringify(updated));
+
+      calculateMeetingPoint(acceptedRequest);
     }
   };
 
@@ -288,10 +406,17 @@ const Map = () => {
         setHeatLayer(null);
       }
     } else {
-      const newHeatLayer = L.heatLayer(crowdDensityData.map(point => [point.lat, point.lng, point.intensity]), {
-        radius: 25,
-        blur: 15,
-        maxZoom: 18,
+      let floorData = [];
+      if (viewMode === 'building' && selectedBuilding) {
+        floorData = crowdDensityData[`${selectedBuilding.id}-${currentFloor}`] || [];
+      } else {
+        // Campus-wide density (simplified)
+        floorData = [{ x: 50, y: 50, intensity: 0.3 }];
+      }
+      const newHeatLayer = L.heatLayer(floorData.map(point => [point.x, point.y, point.intensity]), {
+        radius: viewMode === 'building' ? 15 : 25,
+        blur: viewMode === 'building' ? 10 : 15,
+        maxZoom: viewMode === 'building' ? 10 : 5,
         gradient: { 0.2: 'blue', 0.4: 'lime', 0.6: 'yellow', 0.8: 'orange', 1.0: 'red' }
       }).addTo(mapRef.current);
       setHeatLayer(newHeatLayer);
@@ -299,21 +424,92 @@ const Map = () => {
     setShowCrowdDensity(!showCrowdDensity);
   };
 
+  // Handle building selection
+  const handleBuildingClick = (building) => {
+    setSelectedBuilding(building);
+    setViewMode('building');
+    setCurrentFloor('ground');
+    // Reset routing and help requests when switching views
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+      setRoutingControl(null);
+    }
+    setActiveRoute(null);
+    setActiveHelpRequest(null);
+  };
+
+  // Return to campus view
+  const handleBackToCampus = () => {
+    setViewMode('campus');
+    setSelectedBuilding(null);
+    setCurrentFloor('ground');
+    // Reset routing and help requests
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+      setRoutingControl(null);
+    }
+    setActiveRoute(null);
+    setActiveHelpRequest(null);
+  };
+
   return (
     <div>
       <h2>Safety Map</h2>
 
-      {/* Control buttons */}
-      <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        {user?.role === 'student' && (
+      {/* Navigation and control buttons */}
+      <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {viewMode === 'building' && (
           <button
-            onClick={handleContactSecurity}
-            style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
-            aria-label="Contact security for directions to nearest safe point"
+            onClick={handleBackToCampus}
+            style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+            aria-label="Return to campus overview"
           >
-            📞 Contact Security
+            ← Back to Campus
           </button>
         )}
+
+        {viewMode === 'building' && selectedBuilding && (
+          <div style={{ fontWeight: 'bold', color: '#333' }}>
+            {selectedBuilding.name}
+          </div>
+        )}
+
+        {viewMode === 'building' && (
+          <div>
+            <label htmlFor="floor-select" style={{ marginRight: '5px' }}>Floor:</label>
+            <select
+              id="floor-select"
+              value={currentFloor}
+              onChange={(e) => setCurrentFloor(e.target.value)}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            >
+              {selectedBuilding?.floors.map(floor => (
+                <option key={floor} value={floor}>
+                  {floor === 'ground' ? 'Ground Floor' :
+                   floor === 'first' ? 'First Floor' :
+                   floor === 'second' ? 'Second Floor' :
+                   floor === 'third' ? 'Third Floor' :
+                   floor === 'fourth' ? 'Fourth Floor' : floor}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {user?.role === 'student' && (
+          <button
+            onClick={handleRequestHelp}
+            style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+            aria-label="Request help from security"
+          >
+            🆘 Request Help
+          </button>
+        )}
+
         {(user?.role === 'security' || user?.role === 'admin') && (
           <button
             onClick={handlePanicAlert}
@@ -323,6 +519,7 @@ const Map = () => {
             🚨 Panic Alert
           </button>
         )}
+
         <button
           onClick={toggleCrowdDensity}
           style={{ backgroundColor: showCrowdDensity ? '#28a745' : '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
@@ -334,13 +531,21 @@ const Map = () => {
 
       {activeRoute && (
         <div style={{
-          backgroundColor: activeRoute.type === 'panic' ? '#f8d7da' : '#d1ecf1',
-          border: `1px solid ${activeRoute.type === 'panic' ? '#f5c6cb' : '#bee5eb'}`,
+          backgroundColor: activeRoute.type === 'meeting' ? '#d4edda' : activeRoute.type === 'panic' ? '#f8d7da' : '#d1ecf1',
+          border: `1px solid ${activeRoute.type === 'meeting' ? '#c3e6cb' : activeRoute.type === 'panic' ? '#f5c6cb' : '#bee5eb'}`,
           padding: '10px',
           marginBottom: '10px',
           borderRadius: '4px'
         }}>
-          <strong>{activeRoute.type === 'panic' ? '🚨 Panic Alert Route' : '📞 Security Route'}:</strong> Routing to {activeRoute.destination.name}
+          {activeRoute.type === 'meeting' ? (
+            <div>
+              <strong>🤝 Meeting Route Active:</strong> Both you and security are navigating to the meeting point at coordinates ({activeRoute.meetingPoint[0].toFixed(1)}, {activeRoute.meetingPoint[1].toFixed(1)})
+            </div>
+          ) : (
+            <div>
+              <strong>{activeRoute.type === 'panic' ? '🚨 Panic Alert Route' : '📞 Security Route'}:</strong> Routing to {activeRoute.destination.name}
+            </div>
+          )}
         </div>
       )}
 
@@ -416,104 +621,226 @@ const Map = () => {
         overflow: 'hidden'
       }}>
         <MapContainer
-          center={[-26.190, 28.030]}
-          zoom={16}
+          center={viewMode === 'campus' ? [-26.190, 28.030] : [50, 50]}
+          zoom={viewMode === 'campus' ? 16 : 2}
           style={{ height: '100%', width: '100%' }}
           ref={mapRef}
-          maxBounds={campusBounds}
+          maxBounds={viewMode === 'campus' ? campusBounds : [[0, 0], [100, 100]]}
           maxBoundsViscosity={1.0}
+          crs={viewMode === 'campus' ? L.CRS.EPSG3857 : L.CRS.Simple}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
+          {viewMode === 'campus' ? (
+            // Campus view with OpenStreetMap tiles
+            <>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
 
-          {/* Buildings */}
-          {buildings.map(building => (
-            <Polygon
-              key={building.id}
-              positions={building.coordinates}
-              pathOptions={{
-                color: building.type === 'dining' ? '#ff6b6b' : '#4ecdc4',
-                fillColor: building.type === 'dining' ? '#ff6b6b' : '#4ecdc4',
-                fillOpacity: 0.3,
-                weight: 2
-              }}
-            >
-              <Popup>
-                <strong>{building.name}</strong><br />
-                {building.description}
-              </Popup>
-            </Polygon>
-          ))}
+              {/* Building markers on campus */}
+              {buildings.map(building => (
+                <Marker
+                  key={building.id}
+                  position={building.coordinates}
+                  eventHandlers={{
+                    click: () => handleBuildingClick(building),
+                  }}
+                >
+                  <Popup>
+                    <div style={{ textAlign: 'center' }}>
+                      <strong>{building.name}</strong><br />
+                      <em>{building.description}</em><br />
+                      <button
+                        onClick={() => handleBuildingClick(building)}
+                        style={{
+                          marginTop: '8px',
+                          padding: '6px 12px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        View Interior
+                      </button>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
 
-          {/* High traffic areas */}
-          {highTrafficAreas.map(area => (
-            <Polygon
-              key={area.id}
-              positions={area.coordinates}
-              pathOptions={{
-                color: area.density === 'high' ? '#e74c3c' : area.density === 'medium' ? '#f39c12' : '#27ae60',
-                fillColor: area.density === 'high' ? '#e74c3c' : area.density === 'medium' ? '#f39c12' : '#27ae60',
-                fillOpacity: 0.1,
-                weight: 1,
-                dashArray: '5, 5'
-              }}
-            >
-              <Popup>
-                <strong>{area.name}</strong><br />
-                {area.description}<br />
-                Density: {area.density}
-              </Popup>
-            </Polygon>
-          ))}
+              {/* Campus-wide security locations */}
+              {securityLocations.map(loc => (
+                <Marker key={loc.id} position={buildings.find(b => b.id === loc.building)?.coordinates || [0, 0]} icon={securityIcon}>
+                  <Popup>
+                    <strong>{loc.name}</strong><br />
+                    Building: {buildings.find(b => b.id === loc.building)?.name}<br />
+                    Type: {loc.type}
+                  </Popup>
+                </Marker>
+              ))}
+            </>
+          ) : (
+            // Building interior view
+            <>
+              {/* White background for indoor map */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#f8f9fa',
+                zIndex: 0
+              }} />
 
-          {/* Gates */}
-          {gates.map(gate => (
-            <Marker key={gate.id} position={gate.coordinates} icon={gateIcon}>
-              <Popup>
-                <strong>{gate.name}</strong><br />
-                Type: {gate.type}
-              </Popup>
-            </Marker>
-          ))}
+              {/* Rooms for current building and floor */}
+              {selectedBuilding && buildingFloorPlans[selectedBuilding.id]?.[currentFloor]?.map(room => (
+                <Polygon
+                  key={room.id}
+                  positions={room.coords}
+                  pathOptions={{
+                    color: room.type === 'dining' ? '#ff6b6b' :
+                           room.type === 'study' ? '#4ecdc4' :
+                           room.type === 'security' ? '#e74c3c' :
+                           room.type === 'classroom' ? '#9b59b6' :
+                           room.type === 'lab' ? '#f39c12' :
+                           room.type === 'office' ? '#3498db' :
+                           room.type === 'entrance' ? '#27ae60' :
+                           room.type === 'service' ? '#95a5a6' :
+                           room.type === 'facility' ? '#9b59b6' :
+                           room.type === 'exit' ? '#e74c3c' :
+                           room.type === 'storage' ? '#34495e' :
+                           room.type === 'meeting' ? '#f1c40f' :
+                           room.type === 'outdoor' ? '#2ecc71' :
+                           room.type === 'common' ? '#95a5a6' :
+                           room.type === 'residential' ? '#3498db' :
+                           room.type === 'sports' ? '#e67e22' : '#95a5a6',
+                    fillColor: room.type === 'dining' ? '#ff6b6b' :
+                              room.type === 'study' ? '#4ecdc4' :
+                              room.type === 'security' ? '#e74c3c' :
+                              room.type === 'classroom' ? '#9b59b6' :
+                              room.type === 'lab' ? '#f39c12' :
+                              room.type === 'office' ? '#3498db' :
+                              room.type === 'entrance' ? '#27ae60' :
+                              room.type === 'service' ? '#95a5a6' :
+                              room.type === 'facility' ? '#9b59b6' :
+                              room.type === 'exit' ? '#e74c3c' :
+                              room.type === 'storage' ? '#34495e' :
+                              room.type === 'meeting' ? '#f1c40f' :
+                              room.type === 'outdoor' ? '#2ecc71' :
+                              room.type === 'common' ? '#95a5a6' :
+                              room.type === 'residential' ? '#3498db' :
+                              room.type === 'sports' ? '#e67e22' : '#95a5a6',
+                    fillOpacity: 0.3,
+                    weight: 2
+                  }}
+                >
+                  <Popup>
+                    <strong>{room.name}</strong><br />
+                    {room.desc}
+                  </Popup>
+                </Polygon>
+              ))}
 
-          {/* Safe Zones */}
-          {safeZones.map(zone => (
-            <Marker key={zone.id} position={zone.coordinates} icon={safeZoneIcon}>
-              <Popup>
-                <strong>{zone.name}</strong><br />
-                {zone.description}
-              </Popup>
-            </Marker>
-          ))}
+              {/* High traffic areas for current building/floor */}
+              {highTrafficAreas.filter(area => area.building === selectedBuilding?.id && area.floor === currentFloor).map(area => (
+                <Polygon
+                  key={area.id}
+                  positions={area.coordinates}
+                  pathOptions={{
+                    color: area.density === 'high' ? '#e74c3c' : area.density === 'medium' ? '#f39c12' : '#27ae60',
+                    fillColor: area.density === 'high' ? '#e74c3c' : area.density === 'medium' ? '#f39c12' : '#27ae60',
+                    fillOpacity: 0.1,
+                    weight: 1,
+                    dashArray: '5, 5'
+                  }}
+                >
+                  <Popup>
+                    <strong>{area.name}</strong><br />
+                    {area.description}<br />
+                    Density: {area.density}
+                  </Popup>
+                </Polygon>
+              ))}
 
-          {/* Security Offices */}
-          {securityOffices.map(office => (
-            <Marker key={office.id} position={office.coordinates} icon={securityIcon}>
-              <Popup>
-                <strong>{office.name}</strong><br />
-                {office.description}
-              </Popup>
-            </Marker>
-          ))}
+              {/* Safe Zones for current building/floor */}
+              {safeZones.filter(zone => zone.building === selectedBuilding?.id && zone.floor === currentFloor).map(zone => (
+                <Marker key={zone.id} position={zone.coordinates} icon={safeZoneIcon}>
+                  <Popup>
+                    <strong>{zone.name}</strong><br />
+                    {zone.description}
+                  </Popup>
+                </Marker>
+              ))}
 
-          {/* User Location */}
-          {userLocation && (
-            <Marker position={userLocation}>
-              <Popup>You are here</Popup>
-            </Marker>
+              {/* Security Locations for current building/floor */}
+              {securityLocations.filter(loc => loc.building === selectedBuilding?.id && loc.floor === currentFloor).map(loc => (
+                <Marker key={loc.id} position={loc.coordinates} icon={securityIcon}>
+                  <Popup>
+                    <strong>{loc.name}</strong><br />
+                    {loc.description}<br />
+                    Type: {loc.type}
+                  </Popup>
+                </Marker>
+              ))}
+
+              {/* User Location */}
+              {userLocation && (
+                <Marker position={userLocation}>
+                  <Popup>
+                    <strong>You are here</strong><br />
+                    Building: {selectedBuilding?.name}<br />
+                    Floor: {currentFloor === 'ground' ? 'Ground Floor' :
+                           currentFloor === 'first' ? 'First Floor' :
+                           currentFloor === 'second' ? 'Second Floor' :
+                           currentFloor === 'third' ? 'Third Floor' :
+                           currentFloor === 'fourth' ? 'Fourth Floor' : currentFloor}
+                  </Popup>
+                </Marker>
+              )}
+
+              {/* Active Help Request */}
+              {activeHelpRequest && activeHelpRequest.building === selectedBuilding?.id && activeHelpRequest.floor === currentFloor && (
+                <Marker position={activeHelpRequest.location}>
+                  <Popup>
+                    <strong>🆘 Help Request</strong><br />
+                    From: {activeHelpRequest.userName}<br />
+                    Status: {activeHelpRequest.status}
+                  </Popup>
+                </Marker>
+              )}
+
+              {/* Meeting Point */}
+              {activeRoute?.type === 'meeting' && (
+                <Marker position={activeRoute.meetingPoint}>
+                  <Popup>
+                    <strong>📍 Meeting Point</strong><br />
+                    Both parties should meet here
+                  </Popup>
+                </Marker>
+              )}
+
+              {/* Help Requests for Security */}
+              {(user?.role === 'security' || user?.role === 'admin') &&
+                helpRequests.filter(req => req.status === 'pending' && req.building === selectedBuilding?.id && req.floor === currentFloor).map(request => (
+                  <Marker key={request.id} position={request.location}>
+                    <Popup>
+                      <strong>🆘 Help Request</strong><br />
+                      From: {request.userName}<br />
+                      Time: {new Date(request.timestamp).toLocaleTimeString()}<br />
+                      <button
+                        onClick={() => handleAcceptHelpRequest(request.id)}
+                        style={{ marginTop: '5px', padding: '4px 8px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                      >
+                        Accept Request
+                      </button>
+                    </Popup>
+                  </Marker>
+                ))
+              }
+            </>
           )}
-
-          {/* Panic Alerts */}
-          {panicAlerts.map(alert => (
-            <Marker key={alert.id} position={[alert.lat || -26.191, alert.lng || 28.029]}>
-              <Popup>
-                <strong>🚨 Panic Alert</strong><br />
-                {alert.description || 'Emergency situation reported'}
-              </Popup>
-            </Marker>
-          ))}
         </MapContainer>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { therapists } from './counselingData.js';
 
 const TherapyBooking = () => {
   const { user } = useAuth();
@@ -13,12 +14,9 @@ const TherapyBooking = () => {
   const [rating, setRating] = useState({});
 
   useEffect(() => {
-    // Mock therapists
-    const mockTherapists = [
-      { id: '1', name: 'Dr. Smith' },
-      { id: '2', name: 'Dr. Johnson' },
-    ];
-    setTherapists(mockTherapists);
+    // Load therapists from data
+    const therapistList = therapists.map(t => ({ id: t.id, name: t.name, specialty: t.specialty }));
+    setTherapists(therapistList);
     // Load appointments
     const allAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
     const userAppointments = allAppointments.filter(a => a.studentId === user.id).map(a => {
@@ -108,7 +106,7 @@ const TherapyBooking = () => {
           <select value={selectedTherapist} onChange={(e) => { setSelectedTherapist(e.target.value); validateField('selectedTherapist', e.target.value); }}>
             <option value="">Select Therapist</option>
             {therapists.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
+              <option key={t.id} value={t.id}>{t.name} - {t.specialty}</option>
             ))}
           </select>
           {errors.selectedTherapist && <span style={{ color: 'red' }}>{errors.selectedTherapist}</span>}

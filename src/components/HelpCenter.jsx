@@ -1,4 +1,5 @@
 import React from 'react';
+import { posts } from './counselingData.js';
 
 const HelpCenter = () => {
   const faqs = [
@@ -9,9 +10,9 @@ const HelpCenter = () => {
   ];
 
   const emergencyContacts = [
-    { name: 'Campus Security', number: '123-456-7890' },
-    { name: 'National Helpline', number: '0800-123-456' },
-    { name: 'Mental Health Support', number: '987-654-3210' },
+    { name: 'Campus Security', contact: 'ext. 911 or security@univ.edu' },
+    { name: 'Counseling Center', contact: 'Main Campus Building, Floor 2' },
+    { name: 'University Name', contact: 'University of Example (Univ.edu)' },
   ];
 
   return (
@@ -30,13 +31,23 @@ const HelpCenter = () => {
         <h3>Emergency Contacts</h3>
         <ul>
           {emergencyContacts.map((contact, i) => (
-            <li key={i}>{contact.name}: {contact.number}</li>
+            <li key={i}>{contact.name}: {contact.contact}</li>
           ))}
         </ul>
       </section>
       <section>
         <h3>Mental Health Guidelines</h3>
         <p>Remember to prioritize your well-being. Seek help when needed. Resources are available on campus.</p>
+      </section>
+      <section>
+        <h3>Counseling Center Blog Posts</h3>
+        {posts.map((post, i) => (
+          <div key={i} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px' }}>
+            <h4>{post.title}</h4>
+            <p><strong>By:</strong> {post.author} | <strong>Posted:</strong> {post.date}</p>
+            <p>{post.content}</p>
+          </div>
+        ))}
       </section>
     </div>
   );
