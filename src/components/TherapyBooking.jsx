@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { therapists } from './counselingData.js';
+import { therapists as dataTherapists } from './counselingData.js';
 
 const TherapyBooking = () => {
   const { user } = useAuth();
@@ -15,7 +15,9 @@ const TherapyBooking = () => {
 
   useEffect(() => {
     // Load therapists from data
-    const therapistList = therapists.map(t => ({ id: t.id, name: t.name, specialty: t.specialty }));
+    console.log('Data therapists:', dataTherapists);
+    const therapistList = dataTherapists.map(t => ({ id: t.id, name: t.name, specialty: t.specialty }));
+    console.log('Therapist list:', therapistList);
     setTherapists(therapistList);
     // Load appointments
     const allAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');

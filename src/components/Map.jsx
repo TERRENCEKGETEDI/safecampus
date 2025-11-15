@@ -20,7 +20,7 @@ delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.7/images/marker-shadow.png',
 });
 
 // Custom icons
@@ -100,12 +100,14 @@ const Map = () => {
 
     // Initialize security locations
     setSecurityLocations([
-      { id: 'security_office', name: 'Security Office', floor: 'ground', coordinates: [10, 87.5], type: 'stationary' },
-      { id: 'security_guard_1', name: 'Security Guard 1', floor: 'ground', coordinates: [50, 25], type: 'mobile' }
+      { id: 'security_office', name: 'Security Office', building: 'security_center', floor: 'ground', coordinates: [25, 22.5], type: 'stationary' },
+      { id: 'security_guard_1', name: 'Security Guard 1', building: 'academic_hall_a', floor: 'ground', coordinates: [50, 25], type: 'mobile' },
+      { id: 'security_guard_2', name: 'Security Guard 2', building: 'library', floor: 'ground', coordinates: [60, 25], type: 'mobile' },
+      { id: 'security_guard_3', name: 'Security Guard 3', building: 'dormitory_a', floor: 'ground', coordinates: [40, 17.5], type: 'mobile' }
     ]);
 
-    // Get user location (simulated)
-    // In real app, this would use GPS for campus and indoor positioning for buildings
+    // Get user location (simulated within building)
+    // In real app, this would use indoor positioning
     const simulateLocation = () => {
       if (viewMode === 'campus') {
         // Random location on campus
@@ -225,7 +227,7 @@ const Map = () => {
   const findNearestSecurity = (userPos) => {
     let nearest = null;
     let minDistance = Infinity;
-    securityOffices.forEach(office => {
+    securityLocations.forEach(office => {
       const distance = calculateDistance(userPos, office.coordinates);
       if (distance < minDistance) {
         minDistance = distance;
@@ -356,48 +358,6 @@ const Map = () => {
     }
   };
 
-  // Panic Alert feature for security
-  const handlePanicAlert = () => {
-    if (user?.role !== 'security' && user?.role !== 'admin') {
-      alert('Only security personnel can activate panic alerts.');
-      return;
-    }
-
-    // Mock panic alert location (in real app, this would come from alert data)
-    const alertLocation = [-26.191, 28.029]; // Near cafeteria
-
-    if (routingControl) {
-      mapRef.current.removeControl(routingControl);
-    }
-
-    const newRoutingControl = L.Routing.control({
-      waypoints: [
-        L.latLng(userLocation ? userLocation[0] : -26.190, userLocation ? userLocation[1] : 28.030),
-        L.latLng(alertLocation[0], alertLocation[1])
-      ],
-      routeWhileDragging: false,
-      createMarker: () => null,
-      lineOptions: {
-        styles: [{ color: 'red', weight: 6 }]
-      }
-    }).addTo(mapRef.current);
-
-    setRoutingControl(newRoutingControl);
-    setActiveRoute({ type: 'panic', destination: { name: 'Panic Alert Location', coordinates: alertLocation } });
-
-    // Mock additional info
-    const hazards = ['High crowd density', 'Potential bottleneck at cafeteria entrance'];
-    const coordinationPoints = ['Security Post Alpha', 'Medical Team Beta'];
-
-    const message = `Routing to panic alert location. Hazards: ${hazards.join(', ')}. Coordination points: ${coordinationPoints.join(', ')}.`;
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(message);
-      window.speechSynthesis.speak(utterance);
-    }
-
-    alert(message);
-  };
-
   // Toggle crowd density heatmap
   const toggleCrowdDensity = () => {
     if (showCrowdDensity) {
@@ -500,7 +460,7 @@ const Map = () => {
           </div>
         )}
 
-        {user?.role === 'student' && (
+        {user?.role === 'student' && viewMode === 'building' && (
           <button
             onClick={handleRequestHelp}
             style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
@@ -512,7 +472,7 @@ const Map = () => {
 
         {(user?.role === 'security' || user?.role === 'admin') && (
           <button
-            onClick={handlePanicAlert}
+            onClick={() => alert('Panic Alert activated!')}
             style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
             aria-label="Activate panic alert routing"
           >
@@ -531,21 +491,13 @@ const Map = () => {
 
       {activeRoute && (
         <div style={{
-          backgroundColor: activeRoute.type === 'meeting' ? '#d4edda' : activeRoute.type === 'panic' ? '#f8d7da' : '#d1ecf1',
-          border: `1px solid ${activeRoute.type === 'meeting' ? '#c3e6cb' : activeRoute.type === 'panic' ? '#f5c6cb' : '#bee5eb'}`,
+          backgroundColor: activeRoute.type === 'panic' ? '#f8d7da' : '#d1ecf1',
+          border: `1px solid ${activeRoute.type === 'panic' ? '#f5c6cb' : '#bee5eb'}`,
           padding: '10px',
           marginBottom: '10px',
           borderRadius: '4px'
         }}>
-          {activeRoute.type === 'meeting' ? (
-            <div>
-              <strong>🤝 Meeting Route Active:</strong> Both you and security are navigating to the meeting point at coordinates ({activeRoute.meetingPoint[0].toFixed(1)}, {activeRoute.meetingPoint[1].toFixed(1)})
-            </div>
-          ) : (
-            <div>
-              <strong>{activeRoute.type === 'panic' ? '🚨 Panic Alert Route' : '📞 Security Route'}:</strong> Routing to {activeRoute.destination.name}
-            </div>
-          )}
+          <strong>{activeRoute.type === 'panic' ? '🚨 Panic Alert Route' : '🆘 Help Request Route'}:</strong> Navigating to meeting point
         </div>
       )}
 
