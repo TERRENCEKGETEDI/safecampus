@@ -93,7 +93,8 @@ const Dashboard = () => {
       case 'student':
         return (
           <>
-            <Link to="/report">Submit Report</Link>
+            <Link to="/report">Submit GBV Report</Link>
+            <Link to="/missing-report">Report Missing Person</Link>
             <Link to="/reports">View Reports</Link>
             <Link to="/therapy">Book Therapy</Link>
             <Link to="/forum">Forum</Link>
@@ -115,6 +116,7 @@ const Dashboard = () => {
           <>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/reports">Monitor Reports</Link>
+            <Link to="/missing-persons">Missing Persons</Link>
             <Link to="/map">Live Map</Link>
             <Link to="/analytics">Analytics</Link>
             <Link to="/alerts">Issue Alerts</Link>

@@ -22,7 +22,7 @@ const SecurityReportsManagement = () => {
   const [evidence, setEvidence] = useState([]);
 
   useEffect(() => {
-    if (user?.role === 'security') {
+    if (user?.role === 'security' || user?.role === 'admin') {
       const allReports = JSON.parse(localStorage.getItem('reports') || '[]');
       setReports(allReports);
       setFilteredReports(allReports);
@@ -163,8 +163,8 @@ const SecurityReportsManagement = () => {
     a.click();
   };
 
-  if (user?.role !== 'security') {
-    return <div>Access denied. Security personnel only.</div>;
+  if (user?.role !== 'security' && user?.role !== 'admin') {
+    return <div>Access denied. Security and Admin personnel only.</div>;
   }
 
   return (

@@ -1,5 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { Bar, Line, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import SouthAfricaMap from './SouthAfricaMap.jsx';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const IncidentAnalyticsDashboard = () => {
   const { user } = useAuth();
@@ -10,15 +36,20 @@ const IncidentAnalyticsDashboard = () => {
     resolvedReports: 0,
     pendingReports: 0,
     urgentReports: 0,
-    typeBreakdown: {},
+    categoryBreakdown: {},
     locationBreakdown: {},
     monthlyTrends: [],
     weeklyStats: [],
-    suspectReports: 0
+    suspectReports: 0,
+    therapyFunnel: {
+      aiChats: 0,
+      therapyBookings: 0,
+      therapyCompleted: 0
+    }
   });
 
   useEffect(() => {
-    if (user?.role === 'security') {
+    if (user?.role === 'security' || user?.role === 'admin') {
       const allReports = JSON.parse(localStorage.getItem('reports') || '[]');
       setReports(allReports);
       calculateAnalytics(allReports, timeRange);
@@ -47,10 +78,10 @@ const IncidentAnalyticsDashboard = () => {
     const pendingReports = filteredReports.filter(r => r.status === 'pending').length;
     const urgentReports = filteredReports.filter(r => r.severity === 'high').length;
 
-    // Type breakdown
-    const typeBreakdown = {};
+    // Category breakdown (SAPS categories)
+    const categoryBreakdown = {};
     filteredReports.forEach(r => {
-      typeBreakdown[r.type] = (typeBreakdown[r.type] || 0) + 1;
+      categoryBreakdown[r.category] = (categoryBreakdown[r.category] || 0) + 1;
     });
 
     // Location breakdown
@@ -96,16 +127,26 @@ const IncidentAnalyticsDashboard = () => {
     // Suspect reports
     const suspectReports = filteredReports.filter(r => r.suspectDetails).length;
 
+    // Therapy funnel data
+    const therapyBookings = JSON.parse(localStorage.getItem('therapyBookings') || '[]');
+    const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
+    const therapyCompleted = therapyBookings.filter(b => b.status === 'completed').length;
+
     setAnalytics({
       totalReports,
       resolvedReports,
       pendingReports,
       urgentReports,
-      typeBreakdown,
+      categoryBreakdown,
       locationBreakdown,
       monthlyTrends,
       weeklyStats,
-      suspectReports
+      suspectReports,
+      therapyFunnel: {
+        aiChats: aiChats.length,
+        therapyBookings: therapyBookings.length,
+        therapyCompleted
+      }
     });
   };
 
@@ -118,8 +159,8 @@ const IncidentAnalyticsDashboard = () => {
       ['Urgent Reports', analytics.urgentReports],
       ['Reports with Suspect Details', analytics.suspectReports],
       [],
-      ['Incident Types', 'Count'],
-      ...Object.entries(analytics.typeBreakdown),
+      ['GBV Categories (SAPS)', 'Count'],
+      ...Object.entries(analytics.categoryBreakdown),
       [],
       ['Locations', 'Count'],
       ...Object.entries(analytics.locationBreakdown),
@@ -128,7 +169,12 @@ const IncidentAnalyticsDashboard = () => {
       ...analytics.monthlyTrends.map(m => [m.month, m.count, m.resolved]),
       [],
       ['Weekly Stats', 'Total', 'Urgent'],
-      ...analytics.weeklyStats.map(w => [w.week, w.count, w.urgent])
+      ...analytics.weeklyStats.map(w => [w.week, w.count, w.urgent]),
+      [],
+      ['Mental Health Funnel', 'Count'],
+      ['AI Chats Used', analytics.therapyFunnel.aiChats],
+      ['Therapy Booked', analytics.therapyFunnel.therapyBookings],
+      ['Therapy Completed', analytics.therapyFunnel.therapyCompleted]
     ];
 
     const csv = csvData.map(row => row.join(',')).join('\n');
@@ -145,8 +191,8 @@ const IncidentAnalyticsDashboard = () => {
     alert('PDF export functionality would be implemented with a PDF generation library like jsPDF');
   };
 
-  if (user?.role !== 'security') {
-    return <div>Access denied. Security personnel only.</div>;
+  if (user?.role !== 'security' && user?.role !== 'admin') {
+    return <div>Access denied. Security and Admin personnel only.</div>;
   }
 
   return (
@@ -194,20 +240,28 @@ const IncidentAnalyticsDashboard = () => {
 
       <div className="charts-section">
         <div className="chart-container">
-          <h3>Incident Types Breakdown</h3>
+          <h3>Reports by GBV Category</h3>
           <div className="chart-placeholder">
-            {Object.entries(analytics.typeBreakdown).length > 0 ? (
-              <ul className="type-breakdown">
-                {Object.entries(analytics.typeBreakdown)
-                  .sort(([,a], [,b]) => b - a)
-                  .map(([type, count]) => (
-                    <li key={type}>
-                      <span className="type-label">{type}</span>
-                      <span className="type-count">{count}</span>
-                      <div className="type-bar" style={{width: `${(count / analytics.totalReports) * 100}%`}}></div>
-                    </li>
-                  ))}
-              </ul>
+            {Object.keys(analytics.categoryBreakdown).length > 0 ? (
+              <Bar
+                data={{
+                  labels: Object.keys(analytics.categoryBreakdown),
+                  datasets: [{
+                    label: 'Number of Reports',
+                    data: Object.values(analytics.categoryBreakdown),
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                  }],
+                }}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: { position: 'top' },
+                    title: { display: true, text: 'GBV Reports by Category (SAPS Official Categories)' },
+                  },
+                }}
+              />
             ) : (
               <p>No data available</p>
             )}
@@ -215,32 +269,84 @@ const IncidentAnalyticsDashboard = () => {
         </div>
 
         <div className="chart-container">
-          <h3>Monthly Trends</h3>
+          <h3>Incident Reports Over Time</h3>
           <div className="chart-placeholder">
-            <div className="trend-chart">
-              {analytics.monthlyTrends.map((month, i) => (
-                <div key={i} className="trend-bar">
-                  <div className="trend-total" style={{height: `${month.count * 10}px`}} title={`Total: ${month.count}`}></div>
-                  <div className="trend-resolved" style={{height: `${month.resolved * 10}px`}} title={`Resolved: ${month.resolved}`}></div>
-                  <span className="trend-label">{month.month}</span>
-                </div>
-              ))}
-            </div>
+            <Line
+              data={{
+                labels: analytics.monthlyTrends.map(m => m.month),
+                datasets: [
+                  {
+                    label: 'Total Reports',
+                    data: analytics.monthlyTrends.map(m => m.count),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                  },
+                  {
+                    label: 'Resolved Reports',
+                    data: analytics.monthlyTrends.map(m => m.resolved),
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: { position: 'top' },
+                  title: { display: true, text: 'Monthly Incident Trends' },
+                },
+              }}
+            />
           </div>
         </div>
 
         <div className="chart-container">
-          <h3>Weekly Urgent Incidents</h3>
+          <h3>Mental Health Funnel</h3>
           <div className="chart-placeholder">
-            <div className="weekly-chart">
-              {analytics.weeklyStats.map((week, i) => (
-                <div key={i} className="weekly-bar">
-                  <div className="weekly-total" style={{height: `${week.count * 8}px`}} title={`Total: ${week.count}`}></div>
-                  <div className="weekly-urgent" style={{height: `${week.urgent * 8}px`}} title={`Urgent: ${week.urgent}`}></div>
-                  <span className="weekly-label">{week.week}</span>
-                </div>
-              ))}
-            </div>
+            <Doughnut
+              data={{
+                labels: ['AI Chats Used', 'Therapy Booked', 'Therapy Completed'],
+                datasets: [{
+                  label: 'Students',
+                  data: [
+                    analytics.therapyFunnel.aiChats,
+                    analytics.therapyFunnel.therapyBookings,
+                    analytics.therapyFunnel.therapyCompleted
+                  ],
+                  backgroundColor: [
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                  ],
+                  borderColor: [
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(54, 162, 235, 1)',
+                  ],
+                  borderWidth: 1,
+                }],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: { position: 'top' },
+                  title: { display: true, text: 'Mental Health Support Funnel' },
+                },
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="chart-container">
+          <h3>South Africa Safety Map</h3>
+          <div className="chart-placeholder">
+            <SouthAfricaMap
+              incidents={reports}
+              missingPersons={JSON.parse(localStorage.getItem('missingReports') || '[]')}
+              securityAlerts={JSON.parse(localStorage.getItem('panicAlerts') || '[]')}
+            />
           </div>
         </div>
       </div>
@@ -272,28 +378,28 @@ const IncidentAnalyticsDashboard = () => {
         </div>
 
         <div className="table-section">
-          <h3>Resolution Rate by Type</h3>
+          <h3>Resolution Rate by GBV Category</h3>
           <table>
             <thead>
               <tr>
-                <th>Type</th>
+                <th>Category</th>
                 <th>Total</th>
                 <th>Resolved</th>
                 <th>Resolution Rate</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(analytics.typeBreakdown).map(([type]) => {
-                const typeReports = reports.filter(r => r.type === type && (!timeRange || timeRange === 'all' ||
+              {Object.entries(analytics.categoryBreakdown).map(([category]) => {
+                const categoryReports = reports.filter(r => r.category === category && (!timeRange || timeRange === 'all' ||
                   (timeRange === 'month' && new Date(r.timestamp) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) ||
                   (timeRange === 'week' && new Date(r.timestamp) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))));
-                const resolved = typeReports.filter(r => r.status === 'resolved').length;
+                const resolved = categoryReports.filter(r => r.status === 'resolved').length;
                 return (
-                  <tr key={type}>
-                    <td>{type}</td>
-                    <td>{typeReports.length}</td>
+                  <tr key={category}>
+                    <td>{category}</td>
+                    <td>{categoryReports.length}</td>
                     <td>{resolved}</td>
-                    <td>{typeReports.length > 0 ? ((resolved / typeReports.length) * 100).toFixed(1) : 0}%</td>
+                    <td>{categoryReports.length > 0 ? ((resolved / categoryReports.length) * 100).toFixed(1) : 0}%</td>
                   </tr>
                 );
               })}

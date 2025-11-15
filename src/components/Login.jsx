@@ -6,11 +6,33 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [discreetMode, setDiscreetMode] = useState(false);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const validateField = (name, value) => {
+    let error = '';
+    switch (name) {
+      case 'email':
+        if (!value) error = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(value)) error = 'Email is invalid';
+        break;
+      case 'password':
+        if (!value) error = 'Password is required';
+        break;
+      default:
+        break;
+    }
+    setErrors({ ...errors, [name]: error });
+  };
+
+  const isFormValid = () => {
+    return !errors.email && !errors.password && email && password;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!isFormValid()) return;
     // Simulate API call
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find(u => u.email === email && u.password === password);
@@ -35,20 +57,26 @@ const Login = () => {
     <div className="fade-in">
       <form onSubmit={handleLogin}>
         <h2>Login</h2>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          required
-        />
+        <div>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); validateField('email', e.target.value); }}
+            placeholder="Email"
+            required
+          />
+          {errors.email && <span style={{ color: 'red' }}>{errors.email}</span>}
+        </div>
+        <div>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); validateField('password', e.target.value); }}
+            placeholder="Password"
+            required
+          />
+          {errors.password && <span style={{ color: 'red' }}>{errors.password}</span>}
+        </div>
         <label>
           <input
             type="checkbox"
@@ -57,7 +85,7 @@ const Login = () => {
           />
           Discreet Mode
         </label>
-        <button type="submit">Log In</button>
+        <button type="submit" disabled={!isFormValid()}>Log In</button>
       </form>
       <div className="form-actions">
         <button onClick={() => navigate('/register')} className="secondary-btn">

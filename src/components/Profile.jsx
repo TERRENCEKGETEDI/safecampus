@@ -23,6 +23,9 @@ const Profile = () => {
   const [therapists, setTherapists] = useState([]);
   const [loginActivity, setLoginActivity] = useState([]);
   const [changePassword, setChangePassword] = useState({ current: '', new: '', confirm: '' });
+  const [profileErrors, setProfileErrors] = useState({});
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [contactErrors, setContactErrors] = useState({});
 
   useEffect(() => {
     if (user) {
@@ -60,7 +63,38 @@ const Profile = () => {
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
   };
 
+  const validateProfile = () => {
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Name is required';
+    if (!formData.email.trim()) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid';
+    setProfileErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validatePassword = () => {
+    const errors = {};
+    if (!changePassword.current) errors.current = 'Current password is required';
+    if (!changePassword.new) errors.new = 'New password is required';
+    else if (changePassword.new.length < 6) errors.new = 'New password must be at least 6 characters';
+    if (!changePassword.confirm) errors.confirm = 'Please confirm new password';
+    else if (changePassword.new !== changePassword.confirm) errors.confirm = 'Passwords do not match';
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateContact = () => {
+    const errors = {};
+    if (!newContact.name.trim()) errors.name = 'Name is required';
+    if (!newContact.phone.trim()) errors.phone = 'Phone is required';
+    if (!newContact.email.trim()) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(newContact.email)) errors.email = 'Email is invalid';
+    setContactErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleUpdate = () => {
+    if (!validateProfile()) return;
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const updatedUsers = users.map(u => u.id === user.id ? { ...u, ...formData } : u);
     localStorage.setItem('users', JSON.stringify(updatedUsers));
@@ -68,10 +102,7 @@ const Profile = () => {
   };
 
   const handleChangePassword = () => {
-    if (changePassword.new !== changePassword.confirm) {
-      alert('New passwords do not match');
-      return;
-    }
+    if (!validatePassword()) return;
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const currentUser = users.find(u => u.id === user.id);
     if (currentUser.password !== changePassword.current) {
@@ -81,6 +112,7 @@ const Profile = () => {
     const updatedUsers = users.map(u => u.id === user.id ? { ...u, password: changePassword.new } : u);
     localStorage.setItem('users', JSON.stringify(updatedUsers));
     setChangePassword({ current: '', new: '', confirm: '' });
+    setPasswordErrors({});
     alert('Password changed successfully');
   };
 
@@ -92,9 +124,11 @@ const Profile = () => {
   };
 
   const handleAddContact = () => {
+    if (!validateContact()) return;
     const updatedCircle = [...formData.trustedCircle, newContact];
     saveTrustedCircle(updatedCircle);
     setNewContact({ name: '', phone: '', email: '' });
+    setContactErrors({});
   };
 
   const handleDeleteAccount = () => {
@@ -113,20 +147,26 @@ const Profile = () => {
       <h2>Profile Management</h2>
       <div>
         <h3>Update Profile</h3>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Name"
-        />
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="Email"
-        />
+        <div>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Name"
+          />
+          {profileErrors.name && <span style={{ color: 'red' }}>{profileErrors.name}</span>}
+        </div>
+        <div>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="Email"
+          />
+          {profileErrors.email && <span style={{ color: 'red' }}>{profileErrors.email}</span>}
+        </div>
         <label>
           <input
             type="checkbox"
@@ -253,29 +293,38 @@ const Profile = () => {
             </div>
           </div>
         )}
-        <button onClick={handleUpdate}>Update Profile</button>
+        <button onClick={handleUpdate} disabled={!formData.name.trim() || !formData.email.trim() || profileErrors.name || profileErrors.email}>Update Profile</button>
        </div>
        <div>
          <h3>Change Password</h3>
-         <input
-           type="password"
-           placeholder="Current Password"
-           value={changePassword.current}
-           onChange={(e) => setChangePassword({ ...changePassword, current: e.target.value })}
-         />
-         <input
-           type="password"
-           placeholder="New Password"
-           value={changePassword.new}
-           onChange={(e) => setChangePassword({ ...changePassword, new: e.target.value })}
-         />
-         <input
-           type="password"
-           placeholder="Confirm New Password"
-           value={changePassword.confirm}
-           onChange={(e) => setChangePassword({ ...changePassword, confirm: e.target.value })}
-         />
-         <button onClick={handleChangePassword}>Change Password</button>
+         <div>
+           <input
+             type="password"
+             placeholder="Current Password"
+             value={changePassword.current}
+             onChange={(e) => setChangePassword({ ...changePassword, current: e.target.value })}
+           />
+           {passwordErrors.current && <span style={{ color: 'red' }}>{passwordErrors.current}</span>}
+         </div>
+         <div>
+           <input
+             type="password"
+             placeholder="New Password"
+             value={changePassword.new}
+             onChange={(e) => setChangePassword({ ...changePassword, new: e.target.value })}
+           />
+           {passwordErrors.new && <span style={{ color: 'red' }}>{passwordErrors.new}</span>}
+         </div>
+         <div>
+           <input
+             type="password"
+             placeholder="Confirm New Password"
+             value={changePassword.confirm}
+             onChange={(e) => setChangePassword({ ...changePassword, confirm: e.target.value })}
+           />
+           {passwordErrors.confirm && <span style={{ color: 'red' }}>{passwordErrors.confirm}</span>}
+         </div>
+         <button onClick={handleChangePassword} disabled={!changePassword.current || !changePassword.new || !changePassword.confirm || Object.keys(passwordErrors).length > 0}>Change Password</button>
        </div>
        <div>
         <h3>Trusted Circle</h3>
@@ -299,25 +348,34 @@ const Profile = () => {
         </ul>
         {user.role === 'student' ? (
           <>
-            <input
-              type="text"
-              placeholder="Name"
-              value={newContact.name}
-              onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={newContact.phone}
-              onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={newContact.email}
-              onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-            />
-            <button onClick={handleAddContact}>Add Contact</button>
+            <div>
+              <input
+                type="text"
+                placeholder="Name"
+                value={newContact.name}
+                onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+              />
+              {contactErrors.name && <span style={{ color: 'red' }}>{contactErrors.name}</span>}
+            </div>
+            <div>
+              <input
+                type="tel"
+                placeholder="Phone"
+                value={newContact.phone}
+                onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+              />
+              {contactErrors.phone && <span style={{ color: 'red' }}>{contactErrors.phone}</span>}
+            </div>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={newContact.email}
+                onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+              />
+              {contactErrors.email && <span style={{ color: 'red' }}>{contactErrors.email}</span>}
+            </div>
+            <button onClick={handleAddContact} disabled={!newContact.name.trim() || !newContact.phone.trim() || !newContact.email.trim() || Object.keys(contactErrors).length > 0}>Add Contact</button>
           </>
         ) : (
           <p>Trusted Circle management is only available for students.</p>

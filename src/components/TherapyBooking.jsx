@@ -9,6 +9,7 @@ const TherapyBooking = () => {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [mode, setMode] = useState('online');
+  const [errors, setErrors] = useState({});
   const [rating, setRating] = useState({});
 
   useEffect(() => {
@@ -29,7 +30,32 @@ const TherapyBooking = () => {
     setAppointments(userAppointments);
   }, [user]);
 
+  const validateField = (name, value) => {
+    let error = '';
+    switch (name) {
+      case 'selectedTherapist':
+        if (!value) error = 'Please select a therapist';
+        break;
+      case 'date':
+        if (!value) error = 'Please select a date';
+        else if (new Date(value) < new Date()) error = 'Date cannot be in the past';
+        break;
+      case 'time':
+        if (!value) error = 'Please select a time';
+        break;
+      default:
+        break;
+    }
+    setErrors({ ...errors, [name]: error });
+  };
+
+  const isFormValid = () => {
+    return !errors.selectedTherapist && !errors.date && !errors.time &&
+           selectedTherapist && date && time;
+  };
+
   const handleBook = () => {
+    if (!isFormValid()) return;
     const appointment = {
       id: Date.now().toString(),
       studentId: user.id,
@@ -78,19 +104,28 @@ const TherapyBooking = () => {
       <h2>Therapy Booking</h2>
       <div>
         <h3>Book New Session</h3>
-        <select value={selectedTherapist} onChange={(e) => setSelectedTherapist(e.target.value)}>
-          <option value="">Select Therapist</option>
-          {therapists.map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <div>
+          <select value={selectedTherapist} onChange={(e) => { setSelectedTherapist(e.target.value); validateField('selectedTherapist', e.target.value); }}>
+            <option value="">Select Therapist</option>
+            {therapists.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          {errors.selectedTherapist && <span style={{ color: 'red' }}>{errors.selectedTherapist}</span>}
+        </div>
+        <div>
+          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); validateField('date', e.target.value); }} />
+          {errors.date && <span style={{ color: 'red' }}>{errors.date}</span>}
+        </div>
+        <div>
+          <input type="time" value={time} onChange={(e) => { setTime(e.target.value); validateField('time', e.target.value); }} />
+          {errors.time && <span style={{ color: 'red' }}>{errors.time}</span>}
+        </div>
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
           <option value="online">Online</option>
           <option value="physical">Physical</option>
         </select>
-        <button onClick={handleBook}>Book</button>
+        <button onClick={handleBook} disabled={!isFormValid()}>Book</button>
       </div>
       <div>
         <h3>My Appointments</h3>

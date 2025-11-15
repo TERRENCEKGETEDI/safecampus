@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import UserMenu from './UserMenu.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -27,7 +29,8 @@ const Header = () => {
       case 'student':
         return [
           { to: '/dashboard', label: 'Dashboard' },
-          { to: '/report', label: 'Report Incident' },
+          { to: '/report', label: 'Report GBV' },
+          { to: '/missing-report', label: 'Report Missing Person', highlight: true },
           { to: '/reports', label: 'My Reports' },
           { to: '/therapy', label: 'Book Therapy' },
           { to: '/forum', label: 'Community Forum' },
@@ -44,6 +47,7 @@ const Header = () => {
         return [
           { to: '/dashboard', label: 'Dashboard' },
           { to: '/reports', label: 'Monitor Reports' },
+          { to: '/missing-persons', label: 'Missing Persons', highlight: true },
           { to: '/map', label: 'Live Map' },
           { to: '/analytics', label: 'Analytics' },
           { to: '/alerts', label: 'Issue Alerts' },
@@ -90,20 +94,15 @@ const Header = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`nav-link ${location.pathname === link.to ? 'active' : ''}`}
+                  className={`nav-link ${location.pathname === link.to ? 'active' : ''} ${link.highlight ? 'highlight' : ''}`}
                 >
                   {link.label}
+                  {link.highlight && <span className="highlight-indicator">★</span>}
                 </Link>
               ))}
             </div>
 
-            <div className="user-info">
-              <span className="welcome-text">Welcome, {user.name}</span>
-              <span className={`role-badge role-${user.role}`}>
-                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-              </span>
-              <button onClick={handleLogout} className="logout-btn">Logout</button>
-            </div>
+            <UserMenu />
 
             <button
               className="mobile-menu-toggle"
@@ -114,6 +113,12 @@ const Header = () => {
             </button>
           </nav>
         )}
+
+        {user && (
+          <div className="header-right">
+            <NotificationBell />
+          </div>
+        )}
       </div>
 
       {user && mobileMenuOpen && (
@@ -122,12 +127,49 @@ const Header = () => {
             <Link
               key={link.to}
               to={link.to}
-              className={`mobile-nav-link ${location.pathname === link.to ? 'active' : ''}`}
+              className={`mobile-nav-link ${location.pathname === link.to ? 'active' : ''} ${link.highlight ? 'highlight' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               {link.label}
+              {link.highlight && <span className="highlight-indicator">★</span>}
             </Link>
           ))}
+
+          {/* Mobile User Menu Options */}
+          <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '8px', paddingTop: '8px' }}>
+            <Link
+              to="/profile"
+              className={`mobile-nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              👤 Profile
+            </Link>
+            <Link
+              to="/help"
+              className={`mobile-nav-link ${location.pathname === '/help' ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              ❓ Help Center
+            </Link>
+            <button
+              onClick={() => {
+                handleLogout();
+                setMobileMenuOpen(false);
+              }}
+              className="mobile-nav-link"
+              style={{
+                width: '100%',
+                border: 'none',
+                background: 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                color: '#dc2626',
+                fontWeight: '600'
+              }}
+            >
+              🚪 Logout
+            </button>
+          </div>
         </div>
       )}
     </header>

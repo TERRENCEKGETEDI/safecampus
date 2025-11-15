@@ -21,6 +21,8 @@ import Profile from './components/Profile.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Chatbot from './components/Chatbot.jsx';
 import HelpCenter from './components/HelpCenter.jsx';
+import MissingPersonReport from './components/MissingPersonReport.jsx';
+import MissingPersonManagement from './components/MissingPersonManagement.jsx';
 import './App.css';
 
 function App() {
@@ -36,6 +38,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/report" element={<ProtectedRoute requiredRole="student"><ReportForm /></ProtectedRoute>} />
+              <Route path="/missing-report" element={<ProtectedRoute requiredRole="student"><MissingPersonReport /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><ReportsRouter /></ProtectedRoute>} />
               <Route path="/therapy" element={<ProtectedRoute requiredRole="student"><TherapyBooking /></ProtectedRoute>} />
               <Route path="/therapist-dashboard" element={<ProtectedRoute requiredRole="therapist"><TherapistDashboard /></ProtectedRoute>} />
@@ -44,9 +47,10 @@ function App() {
               <Route path="/admin-dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
               <Route path="/forum" element={<ProtectedRoute><Forum /></ProtectedRoute>} />
               <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute requiredRole="security"><IncidentAnalyticsDashboard /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute allowedRoles={['security', 'admin']}><IncidentAnalyticsDashboard /></ProtectedRoute>} />
               <Route path="/alerts" element={<ProtectedRoute requiredRole="security"><SecurityAlerts /></ProtectedRoute>} />
               <Route path="/chat" element={<ProtectedRoute requiredRole="security"><SecurityChat /></ProtectedRoute>} />
+              <Route path="/missing-persons" element={<ProtectedRoute allowedRoles={['security', 'admin']}><MissingPersonManagement /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/chatbot" element={<ProtectedRoute><Chatbot /></ProtectedRoute>} />
               <Route path="/help" element={<ProtectedRoute><HelpCenter /></ProtectedRoute>} />

@@ -7,6 +7,8 @@ const Forum = () => {
   const [comments, setComments] = useState([]);
   const [newPost, setNewPost] = useState({ title: '', body: '', isAnonymous: false, category: 'general' });
   const [newComment, setNewComment] = useState({});
+  const [postErrors, setPostErrors] = useState({});
+  const [commentErrors, setCommentErrors] = useState({});
 
   useEffect(() => {
     const storedPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
@@ -15,7 +17,26 @@ const Forum = () => {
     setComments(storedComments);
   }, []);
 
+  const validatePost = () => {
+    const errors = {};
+    if (!newPost.title.trim()) errors.title = 'Title is required';
+    if (!newPost.body.trim()) errors.body = 'Body is required';
+    setPostErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateComment = (postId) => {
+    const body = newComment[postId] || '';
+    if (!body.trim()) {
+      setCommentErrors({ ...commentErrors, [postId]: 'Comment cannot be empty' });
+      return false;
+    }
+    setCommentErrors({ ...commentErrors, [postId]: '' });
+    return true;
+  };
+
   const handleAddPost = () => {
+    if (!validatePost()) return;
     const post = {
       ...newPost,
       id: Date.now().toString(),
@@ -27,9 +48,11 @@ const Forum = () => {
     setPosts(updatedPosts);
     localStorage.setItem('forumPosts', JSON.stringify(updatedPosts));
     setNewPost({ title: '', body: '', isAnonymous: false, category: 'general' });
+    setPostErrors({});
   };
 
   const handleAddComment = (postId) => {
+    if (!validateComment(postId)) return;
     const comment = {
       id: Date.now().toString(),
       postId,
@@ -57,17 +80,23 @@ const Forum = () => {
     <div>
       <h2>Community Forum</h2>
       <div>
-        <input
-          type="text"
-          placeholder="Title"
-          value={newPost.title}
-          onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-        />
-        <textarea
-          placeholder="Body"
-          value={newPost.body}
-          onChange={(e) => setNewPost({ ...newPost, body: e.target.value })}
-        />
+        <div>
+          <input
+            type="text"
+            placeholder="Title"
+            value={newPost.title}
+            onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+          />
+          {postErrors.title && <span style={{ color: 'red' }}>{postErrors.title}</span>}
+        </div>
+        <div>
+          <textarea
+            placeholder="Body"
+            value={newPost.body}
+            onChange={(e) => setNewPost({ ...newPost, body: e.target.value })}
+          />
+          {postErrors.body && <span style={{ color: 'red' }}>{postErrors.body}</span>}
+        </div>
         <select value={newPost.category} onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}>
           <option value="general">General</option>
           <option value="support">Support</option>
@@ -81,7 +110,7 @@ const Forum = () => {
           />
           Anonymous
         </label>
-        <button onClick={handleAddPost}>Post</button>
+        <button onClick={handleAddPost} disabled={!newPost.title.trim() || !newPost.body.trim()}>Post</button>
       </div>
       <div>
         {posts.map(post => (
@@ -97,7 +126,8 @@ const Forum = () => {
                 value={newComment[post.id] || ''}
                 onChange={(e) => setNewComment({ ...newComment, [post.id]: e.target.value })}
               />
-              <button onClick={() => handleAddComment(post.id)}>Comment</button>
+              {commentErrors[post.id] && <span style={{ color: 'red' }}>{commentErrors[post.id]}</span>}
+              <button onClick={() => handleAddComment(post.id)} disabled={! (newComment[post.id] || '').trim()}>Comment</button>
             </div>
             <div>
               {comments.filter(c => c.postId === post.id).map(comment => (

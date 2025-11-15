@@ -6,8 +6,12 @@ import SecurityReportsManagement from './SecurityReportsManagement.jsx';
 const ReportsRouter = () => {
   const { user } = useAuth();
 
-  if (user?.role === 'security') {
+  if (user?.role === 'security' || user?.role === 'admin') {
     return <SecurityReportsManagement />;
+  }
+
+  if (user?.role === 'therapist') {
+    return <div>Access denied. Therapists cannot view incident reports.</div>;
   }
 
   return <ReportsManagement />;
