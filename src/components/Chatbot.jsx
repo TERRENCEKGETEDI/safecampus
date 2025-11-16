@@ -100,9 +100,9 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** You can submit a report anonymously through our secure system. Select the appropriate category from our SAPS-aligned options, describe the incident clearly, and attach any evidence if it's safe to do so.`,
         buttons: [
-          { label: 'Report Incident', action: () => navigate('/report') },
-          { label: 'Report Missing Person', action: () => navigate('/missing-report') },
-          { label: 'Track Reports', action: () => navigate('/reports') }
+          { label: 'Report Incident', route: '/report' },
+          { label: 'Report Missing Person', route: '/missing-report' },
+          { label: 'Track Reports', route: '/reports' }
         ]
       };
     } else if (hasTherapy) {
@@ -113,8 +113,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Book a therapy session from the Therapy Booking page. Select a therapist, preferred date and time, and choose your preferred mode (online for convenience or in-person for direct support).`,
         buttons: [
-          { label: 'Book Therapy', action: () => navigate('/therapy') },
-          { label: 'View Resources', action: () => navigate('/therapy-resources') }
+          { label: 'Book Therapy', route: '/therapy' },
+          { label: 'View Resources', route: '/therapy-resources' }
         ]
       };
     } else if (hasPassword) {
@@ -125,8 +125,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Use our secure password reset feature to regain access to your account. Follow the prompts to verify your identity and set a new password.`,
         buttons: [
-          { label: 'Reset Password', action: () => navigate('/profile') }, // Assuming profile has password reset
-          { label: 'Contact Support', action: () => navigate('/help') }
+          { label: 'Reset Password', route: '/profile' }, // Assuming profile has password reset
+          { label: 'Contact Support', route: '/help' }
         ]
       };
     } else if (hasProfile) {
@@ -137,7 +137,7 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Update your profile information, manage notifications, and adjust privacy settings as needed.`,
         buttons: [
-          { label: 'View Profile', action: () => navigate('/profile') }
+          { label: 'View Profile', route: '/profile' }
         ]
       };
     } else if (hasForum) {
@@ -148,7 +148,7 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Join our moderated community forum to connect with others in a safe, supportive environment. Share experiences anonymously if preferred, and access peer support while maintaining your privacy.`,
         buttons: [
-          { label: 'Join Forum', action: () => navigate('/forum') }
+          { label: 'Join Forum', route: '/forum' }
         ]
       };
     } else if (lowerMessage.includes('safety') || lowerMessage.includes('tip') || lowerMessage.includes('secure')) {
@@ -159,8 +159,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Follow these evidence-based safety tips: Walk in well-lit, populated areas, share your location with trusted contacts through our "Walk With Me" feature, avoid isolated places at night, and trust your instincts about unsafe situations.`,
         buttons: [
-          { label: 'View Map', action: () => navigate('/map') },
-          { label: 'Safety Alerts', action: () => navigate('/alerts') }
+          { label: 'View Map', route: '/map' },
+          { label: 'Safety Alerts', route: '/alerts' }
         ]
       };
     } else if (lowerMessage.includes('mental') || lowerMessage.includes('health') || lowerMessage.includes('wellbeing')) {
@@ -171,8 +171,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Practice self-care through grounding techniques, talk openly with trusted friends or family, and consider professional help. Our campus has licensed therapists available, and resources like the 3-minute breathing exercise have scientific backing for reducing anxiety.`,
         buttons: [
-          { label: 'Book Therapy', action: () => navigate('/therapy') },
-          { label: 'View Resources', action: () => navigate('/therapy-resources') }
+          { label: 'Book Therapy', route: '/therapy' },
+          { label: 'View Resources', route: '/therapy-resources' }
         ]
       };
     } else if (hasDistress) {
@@ -183,8 +183,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Try the 3-minute breathing technique: Inhale for 4 counts, hold for 4, exhale for 4. This diaphragmatic breathing has been scientifically proven to activate the parasympathetic nervous system and reduce stress hormones.`,
         buttons: [
-          { label: 'Book Therapy', action: () => navigate('/therapy') },
-          { label: 'Join Forum', action: () => navigate('/forum') }
+          { label: 'Book Therapy', route: '/therapy' },
+          { label: 'Join Forum', route: '/forum' }
         ]
       };
     } else if (hasSafetyConcern) {
@@ -195,8 +195,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Document any incidents safely, use our reporting system if appropriate, and consider speaking with a trusted adult or counselor. Remember that your safety is the top priority.`,
         buttons: [
-          { label: 'Report Incident', action: () => navigate('/report') },
-          { label: 'Emergency Contacts', action: () => navigate('/help') }
+          { label: 'Report Incident', route: '/report' },
+          { label: 'Emergency Contacts', route: '/help' }
         ]
       };
     } else if (seekingHelp) {
@@ -207,8 +207,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** I'm here to listen and help connect you with the right resources. Whether it's immediate safety concerns, mental health support, or general guidance, our campus community is here to support you.`,
         buttons: [
-          { label: 'Get Help', action: () => navigate('/help') },
-          { label: 'Book Therapy', action: () => navigate('/therapy') }
+          { label: 'Get Help', route: '/help' },
+          { label: 'Book Therapy', route: '/therapy' }
         ]
       };
     } else if (lowerMessage.includes('navigation') || lowerMessage.includes('how') || lowerMessage.includes('use')) {
@@ -219,8 +219,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Navigate the platform using: Dashboard for overview, Profile for settings, Reports for tracking incidents, Therapy for booking sessions, and Map for safety planning. Each section is designed for easy access to support services.`,
         buttons: [
-          { label: 'Dashboard', action: () => navigate('/dashboard') },
-          { label: 'Help Center', action: () => navigate('/help') }
+          { label: 'Dashboard', route: '/dashboard' },
+          { label: 'Help Center', route: '/help' }
         ]
       };
     } else if (lowerMessage.includes('emergency') || lowerMessage.includes('number') || lowerMessage.includes('contact')) {
@@ -231,8 +231,8 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Emergency numbers: Campus Security 123-456-7890 (available 24/7), National Helpline 0800-123-456 for additional support. Keep these numbers saved in your phone for quick access.`,
         buttons: [
-          { label: 'View Map', action: () => navigate('/map') },
-          { label: 'Safety Alerts', action: () => navigate('/alerts') }
+          { label: 'View Map', route: '/map' },
+          { label: 'Safety Alerts', route: '/alerts' }
         ]
       };
     } else if (hasMap) {
@@ -243,7 +243,7 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Use our interactive campus map to locate safe routes, find nearby resources, and get directions to important locations.`,
         buttons: [
-          { label: 'View Campus Map', action: () => navigate('/map') }
+          { label: 'View Campus Map', route: '/map' }
         ]
       };
     } else if (hasHelpCenter) {
@@ -254,23 +254,23 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** Browse our comprehensive help center for FAQs, tutorials, and contact information.`,
         buttons: [
-          { label: 'Help Center', action: () => navigate('/help') }
+          { label: 'Help Center', route: '/help' }
         ]
       };
     } else if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('hey')) {
       const personalizedButtons = [
-        { label: 'Book Therapy', action: () => navigate('/therapy') },
-        { label: 'Report Incident', action: () => navigate('/report') },
-        { label: 'View Map', action: () => navigate('/map') }
+        { label: 'Book Therapy', route: '/therapy' },
+        { label: 'Report Incident', route: '/report' },
+        { label: 'View Map', route: '/map' }
       ];
       if (history.therapy > 0) {
-        personalizedButtons.unshift({ label: 'Book Another Session', action: () => navigate('/therapy') });
+        personalizedButtons.unshift({ label: 'Book Another Session', route: '/therapy' });
       }
       if (history.report > 0) {
-        personalizedButtons.push({ label: 'Track Reports', action: () => navigate('/reports') });
+        personalizedButtons.push({ label: 'Track Reports', route: '/reports' });
       }
       if (history.forum > 0) {
-        personalizedButtons.push({ label: 'Join Forum', action: () => navigate('/forum') });
+        personalizedButtons.push({ label: 'Join Forum', route: '/forum' });
       }
       return {
         text: `**What I detected:** You're initiating a conversation, which shows you're taking a positive step toward accessing support.
@@ -298,10 +298,10 @@ const Chatbot = () => {
 
 **Evidence-based suggestion:** I'm here to help with safety concerns, reporting incidents, mental health support, therapy booking, and campus resources. Could you tell me more about what you're looking for assistance with today?`,
         buttons: [
-          { label: 'Book Therapy', action: () => navigate('/therapy') },
-          { label: 'Report Incident', action: () => navigate('/report') },
-          { label: 'Help Center', action: () => navigate('/help') },
-          { label: 'View Map', action: () => navigate('/map') }
+          { label: 'Book Therapy', route: '/therapy' },
+          { label: 'Report Incident', route: '/report' },
+          { label: 'Help Center', route: '/help' },
+          { label: 'View Map', route: '/map' }
         ]
       };
     }
@@ -316,8 +316,8 @@ const Chatbot = () => {
     setInput('');
     setIsStreaming(true);
 
-    // Set a timeout for 5 seconds
-    const timeoutId = setTimeout(() => {
+    // Use fallback response immediately (no API call needed for production)
+    setTimeout(() => {
       const fallbackContent = getFallbackResponse(message);
       const fallbackMessage = { sender: 'AxonCare AI', content: fallbackContent, timestamp: new Date().toISOString() };
       setMessages(prev => [...prev, fallbackMessage]);
@@ -334,61 +334,7 @@ const Chatbot = () => {
       localStorage.setItem('aiChats', JSON.stringify(aiChats));
 
       setIsStreaming(false);
-    }, 5000);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': 'your-api-key'
-        },
-        body: JSON.stringify({ prompt: message })
-      });
-
-      clearTimeout(timeoutId); // Clear timeout if response received
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const botMessage = { sender: 'AxonCare AI', content: { text: data.response, buttons: [] }, timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, botMessage]);
-
-      // Store conversation for analytics and personalization
-      const userId = JSON.parse(localStorage.getItem('user') || 'null')?.id;
-      const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
-      aiChats.push({
-        userId,
-        timestamp: new Date().toISOString(),
-        messageCount: 1,
-        keywords: detectKeywords(message)
-      });
-      localStorage.setItem('aiChats', JSON.stringify(aiChats));
-    } catch (error) {
-      clearTimeout(timeoutId); // Clear timeout on error
-      // If error, the timeout will have already added the fallback
-      if (!isStreaming) return; // Avoid duplicate if timeout already handled
-      const errorContent = getFallbackResponse(message);
-      const errorMessage = { sender: 'AxonCare AI', content: errorContent, timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, errorMessage]);
-
-      // Store conversation for analytics even on error
-      const userId = JSON.parse(localStorage.getItem('user') || 'null')?.id;
-      const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
-      aiChats.push({
-        userId,
-        timestamp: new Date().toISOString(),
-        messageCount: 1,
-        keywords: detectKeywords(message)
-      });
-      localStorage.setItem('aiChats', JSON.stringify(aiChats));
-
-      console.error('Error:', error);
-    } finally {
-      setIsStreaming(false);
-    }
+    }, 500); // Short delay for better UX
   };
 
   const handleKeyPress = (e) => {
@@ -485,7 +431,7 @@ const Chatbot = () => {
                   {msg.content.buttons.map((btn, btnIndex) => (
                     <button
                       key={btnIndex}
-                      onClick={btn.action}
+                      onClick={() => navigate(btn.route)}
                       style={{
                         padding: '5px 10px',
                         marginRight: '5px',
