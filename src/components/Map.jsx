@@ -62,8 +62,10 @@ const Map = () => {
   const [helpRequests, setHelpRequests] = useState([]);
   const [activeHelpRequest, setActiveHelpRequest] = useState(null);
   const [securityLocations, setSecurityLocations] = useState([]);
-  const [viewMode, setViewMode] = useState('campus'); // 'campus' or 'building'
+  const [viewMode, setViewMode] = useState('campus'); // 'campus', 'building', or 'yard'
   const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [textDirections, setTextDirections] = useState([]);
+  const [routingMachineControl, setRoutingMachineControl] = useState(null);
   const mapRef = useRef(null);
 
   // Existing loadshedding state
@@ -80,12 +82,15 @@ const Map = () => {
   });
 
   useEffect(() => {
-    // Mock safe spaces
-    const mockSpaces = [
-      { id: '1', name: 'Student Center', location: { lat: -26.192, lng: 28.030 }, description: 'Safe space for students' },
-      { id: '2', name: 'Security Office', location: { lat: -26.193, lng: 28.031 }, description: 'Contact security' },
+    // Hard-coded safe spaces
+    const hardcodedSafeSpaces = [
+      { id: '1', name: 'Student Center', location: { lat: -26.192, lng: 28.030 }, description: 'Main safe space for students with 24/7 access' },
+      { id: '2', name: 'Library Safe Room', location: { lat: -26.188, lng: 28.028 }, description: 'Secure room in the central library' },
+      { id: '3', name: 'Cafeteria Emergency Area', location: { lat: -26.194, lng: 28.029 }, description: 'Designated safe area in the cafeteria' },
+      { id: '4', name: 'Sports Center Safe Zone', location: { lat: -26.196, lng: 28.033 }, description: 'Emergency safe zone in the sports center' },
+      { id: '5', name: 'Dormitory A Lobby', location: { lat: -26.186, lng: 28.035 }, description: 'Safe lobby area in Dormitory A' },
     ];
-    setSafeSpaces(mockSpaces);
+    setSafeSpaces(hardcodedSafeSpaces);
     // Load panic alerts
     const alerts = JSON.parse(localStorage.getItem('panicAlerts') || '[]');
     setPanicAlerts(alerts);
@@ -109,23 +114,29 @@ const Map = () => {
     // Get user location (simulated within building)
     // In real app, this would use indoor positioning
     const simulateLocation = () => {
-      if (viewMode === 'campus') {
-        // Random location on campus
-        const lat = -26.200 + Math.random() * 0.010; // Within campus bounds
-        const lng = 28.020 + Math.random() * 0.020;
-        setUserLocation([lat, lng]);
-      } else {
-        // Random location within current building
-        const x = Math.random() * 80 + 10; // 10-90 range
-        const y = Math.random() * 80 + 10; // 10-90 range
-        setUserLocation([x, y]);
-      }
+      // Always use GPS coordinates for consistency across views
+      const lat = -26.195 + Math.random() * 0.008; // Within campus bounds
+      const lng = 28.025 + Math.random() * 0.012;
+      setUserLocation([lat, lng]);
     };
 
     simulateLocation();
 
-    // Simulate security guard movement
+    // Simulate security guard movement and live user location
     const interval = setInterval(() => {
+      // Update user location slightly for "live" effect
+      setUserLocation(prev => {
+        if (prev) {
+          const newLat = prev[0] + (Math.random() - 0.5) * 0.0001; // Small movement
+          const newLng = prev[1] + (Math.random() - 0.5) * 0.0001;
+          // Keep within campus bounds
+          const boundedLat = Math.max(-26.200, Math.min(-26.180, newLat));
+          const boundedLng = Math.max(28.020, Math.min(28.040, newLng));
+          return [boundedLat, boundedLng];
+        }
+        return prev;
+      });
+
       setSecurityLocations(prev => prev.map(guard => {
         if (guard.type === 'mobile') {
           // Simulate guard movement
@@ -141,7 +152,7 @@ const Map = () => {
         }
         return guard;
       }));
-    }, 5000); // Update every 5 seconds
+    }, 3000); // Update every 3 seconds for more responsive "live" location
 
     return () => clearInterval(interval);
   }, []);
@@ -237,6 +248,256 @@ const Map = () => {
     return nearest;
   };
 
+  // Find nearby security guards within 1km
+  const findNearbySecurityGuards = (userPos) => {
+    const maxDistance = 1000; // 1km in meters
+    return securityLocations
+      .filter(guard => guard.type === 'mobile' && calculateDistance(userPos, guard.gpsCoordinates) <= maxDistance)
+      .sort((a, b) => calculateDistance(userPos, a.gpsCoordinates) - calculateDistance(userPos, b.gpsCoordinates));
+  };
+
+  // Generate path with turns for realistic navigation
+  const generatePathWithTurns = (start, end) => {
+    const waypoints = [start];
+
+    // Add intermediate waypoints to simulate turns
+    const midX = (start[0] + end[0]) / 2;
+    const midY = (start[1] + end[1]) / 2;
+
+    // Add some variation for turns
+    waypoints.push([midX + 0.0005, start[1]]);
+    waypoints.push([midX + 0.0005, midY]);
+    waypoints.push([end[0], midY]);
+    waypoints.push(end);
+
+    return waypoints;
+  };
+
+  // Generate concise text directions
+  const generateTextDirections = (start, end, person) => {
+    const directions = [];
+    const distance = calculateDistance(start, end);
+
+    directions.push(`${person}: Start at your current location.`);
+    directions.push(`${person}: Head north for 200 meters along the main path.`);
+    directions.push(`${person}: After passing the central fountain (on your right), turn left.`);
+    directions.push(`${person}: Continue straight for 150 meters, then turn right at the oak tree.`);
+    directions.push(`${person}: Walk 100 meters to reach the meeting point in the campus yard.`);
+
+    return directions;
+  };
+
+  // Get directions to safe places
+  const handleGetDirectionsToSafePlaces = () => {
+    if (!userLocation) {
+      alert('Unable to determine your location.');
+      return;
+    }
+
+    // Find nearest safe space
+    const nearestSafeSpace = findNearestSafeSpace(userLocation);
+    if (!nearestSafeSpace) {
+      alert('No safe spaces found nearby.');
+      return;
+    }
+
+    // Switch to yard view for navigation
+    setViewMode('yard');
+
+    // Clear existing routes
+    if (routingMachineControl) {
+      mapRef.current.removeControl(routingMachineControl);
+      setRoutingMachineControl(null);
+    }
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+      setRoutingControl(null);
+    }
+
+    // Create routing control
+    const control = L.Routing.control({
+      waypoints: [
+        L.latLng(userLocation[0], userLocation[1]),
+        L.latLng(nearestSafeSpace.location.lat, nearestSafeSpace.location.lng)
+      ],
+      routeWhileDragging: false,
+      createMarker: () => null, // Don't create default markers
+      lineOptions: {
+        styles: [{ color: 'green', weight: 4, opacity: 0.8 }]
+      }
+    }).addTo(mapRef.current);
+
+    setRoutingMachineControl(control);
+
+    // Style the routing instructions to have black text and blurred background
+    setTimeout(() => {
+      const routingContainer = mapRef.current?.getContainer()?.querySelector('.leaflet-routing-container');
+      if (routingContainer) {
+        routingContainer.style.color = '#000000';
+        routingContainer.style.fontWeight = 'bold';
+        routingContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        routingContainer.style.backdropFilter = 'blur(8px)';
+        routingContainer.style.WebkitBackdropFilter = 'blur(8px)';
+        routingContainer.style.borderRadius = '6px';
+        routingContainer.style.padding = '8px';
+        routingContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+        const instructions = routingContainer.querySelectorAll('.leaflet-routing-alt, .leaflet-routing-instruction');
+        instructions.forEach(el => {
+          el.style.color = '#000000';
+          el.style.fontWeight = 'bold';
+        });
+      }
+    }, 100);
+
+    // Generate directions
+    const directions = generateSafeSpaceDirections(userLocation, [nearestSafeSpace.location.lat, nearestSafeSpace.location.lng], nearestSafeSpace.name);
+    setTextDirections(directions);
+    setActiveRoute({
+      type: 'safe_space',
+      destination: nearestSafeSpace,
+      directions
+    });
+
+    alert(`Directions to ${nearestSafeSpace.name} calculated.`);
+  };
+
+  // Contact security
+  const handleContactSecurity = () => {
+    if (!userLocation) {
+      alert('Unable to determine your location.');
+      return;
+    }
+
+    // Find nearest security guard or office
+    const nearestSecurity = findNearestSecurityGuard(userLocation);
+    if (!nearestSecurity) {
+      alert('No security personnel found nearby.');
+      return;
+    }
+
+    // Switch to yard view for navigation
+    setViewMode('yard');
+
+    // Clear existing routes
+    if (routingMachineControl) {
+      mapRef.current.removeControl(routingMachineControl);
+      setRoutingMachineControl(null);
+    }
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+      setRoutingControl(null);
+    }
+
+    // Create routing control
+    const control = L.Routing.control({
+      waypoints: [
+        L.latLng(userLocation[0], userLocation[1]),
+        L.latLng(nearestSecurity.gpsCoordinates[0], nearestSecurity.gpsCoordinates[1])
+      ],
+      routeWhileDragging: false,
+      createMarker: () => null, // Don't create default markers
+      lineOptions: {
+        styles: [{ color: 'red', weight: 4, opacity: 0.8 }]
+      }
+    }).addTo(mapRef.current);
+
+    setRoutingMachineControl(control);
+
+    // Style the routing instructions to have black text and blurred background
+    setTimeout(() => {
+      const routingContainer = mapRef.current?.getContainer()?.querySelector('.leaflet-routing-container');
+      if (routingContainer) {
+        routingContainer.style.color = '#000000';
+        routingContainer.style.fontWeight = 'bold';
+        routingContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        routingContainer.style.backdropFilter = 'blur(8px)';
+        routingContainer.style.WebkitBackdropFilter = 'blur(8px)';
+        routingContainer.style.borderRadius = '6px';
+        routingContainer.style.padding = '8px';
+        routingContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+        const instructions = routingContainer.querySelectorAll('.leaflet-routing-alt, .leaflet-routing-instruction');
+        instructions.forEach(el => {
+          el.style.color = '#000000';
+          el.style.fontWeight = 'bold';
+        });
+      }
+    }, 100);
+
+    // Generate directions
+    const directions = generateSecurityDirections(userLocation, nearestSecurity.gpsCoordinates, nearestSecurity.name);
+    setTextDirections(directions);
+    setActiveRoute({
+      type: 'contact_security',
+      destination: nearestSecurity,
+      directions
+    });
+
+    alert(`Contacting ${nearestSecurity.name}. Directions calculated.`);
+  };
+
+  // Find nearest safe space
+  const findNearestSafeSpace = (userPos) => {
+    let nearest = null;
+    let minDistance = Infinity;
+    safeSpaces.forEach(space => {
+      const distance = calculateDistance(userPos, [space.location.lat, space.location.lng]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = space;
+      }
+    });
+    return nearest;
+  };
+
+  // Find nearest security guard
+  const findNearestSecurityGuard = (userPos) => {
+    let nearest = null;
+    let minDistance = Infinity;
+    securityLocations.forEach(guard => {
+      const pos = guard.gpsCoordinates || [buildings.find(b => b.id === guard.building)?.coordinates[0] || 0, buildings.find(b => b.id === guard.building)?.coordinates[1] || 0];
+      const distance = calculateDistance(userPos, pos);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = guard;
+      }
+    });
+    return nearest;
+  };
+
+  // Generate directions to safe space
+  const generateSafeSpaceDirections = (start, end, destinationName) => {
+    const directions = [];
+
+    // Use specific Wits campus directions
+    directions.push(`Wits West Campus Internal Road, Yale Road 880.5 m, 3 min 30 s`);
+    directions.push(`Head south 80 m`);
+    directions.push(`Turn left 150 m`);
+    directions.push(`Make a slight left 100 m`);
+    directions.push(`Turn left 450 m`);
+    directions.push(`Turn right onto Wits West Campus Internal Road 90 m`);
+    directions.push(`Turn right onto Yale Road 15 m`);
+    directions.push(`You have arrived at your destination, on the left 0 m`);
+
+    return directions;
+  };
+
+  // Generate directions to security
+  const generateSecurityDirections = (start, end, securityName) => {
+    const directions = [];
+    const distance = calculateDistance(start, end);
+
+    directions.push(`You: Start at your current location.`);
+    directions.push(`You: Head towards ${securityName} (${Math.round(distance)} meters away).`);
+    directions.push(`You: Follow the highlighted red route on the map.`);
+    directions.push(`You: Contact ${securityName} when you arrive.`);
+
+    return directions;
+  };
+
   // Request Help feature for students
   const handleRequestHelp = () => {
     if (!userLocation) {
@@ -244,10 +505,8 @@ const Map = () => {
       return;
     }
 
-    if (viewMode !== 'building' || !selectedBuilding) {
-      alert('Please navigate to a building interior to request help.');
-      return;
-    }
+    // Switch to yard view for campus navigation
+    setViewMode('yard');
 
     const requestId = Date.now().toString();
     const newRequest = {
@@ -255,8 +514,6 @@ const Map = () => {
       userId: user.id,
       userName: user.name || 'Student',
       location: userLocation,
-      building: selectedBuilding.id,
-      floor: currentFloor,
       timestamp: new Date().toISOString(),
       status: 'pending', // pending, accepted, completed
       assignedSecurity: null
@@ -268,11 +525,19 @@ const Map = () => {
     localStorage.setItem('helpRequests', JSON.stringify(updatedRequests));
 
     // Notify security (in real app, this would send push notifications)
-    alert('Help request sent! Security has been notified and will meet you at a central location.');
+    alert('Help request sent! Security has been notified and will meet you at a central location in the campus yard.');
 
     // Simulate security accepting request
     setTimeout(() => {
-      const acceptedRequest = { ...newRequest, status: 'accepted', assignedSecurity: 'security_guard_1' };
+      // Find nearby security guards within 1km
+      const nearbyGuards = findNearbySecurityGuards(userLocation);
+      const assignedGuards = nearbyGuards.slice(0, 2); // Assign up to 2 guards
+
+      const acceptedRequest = {
+        ...newRequest,
+        status: 'accepted',
+        assignedSecurity: assignedGuards.map(g => g.id)
+      };
       const updated = helpRequests.map(req =>
         req.id === requestId ? acceptedRequest : req
       );
@@ -280,8 +545,8 @@ const Map = () => {
       setActiveHelpRequest(acceptedRequest);
       localStorage.setItem('helpRequests', JSON.stringify(updated));
 
-      // Calculate meeting point
-      calculateMeetingPoint(acceptedRequest);
+      // Calculate meeting point and routes
+      calculateYardMeetingPoint(acceptedRequest, assignedGuards);
     }, 2000);
   };
 
@@ -338,6 +603,105 @@ const Map = () => {
     alert(`Meeting point set at coordinates (${meetingPoint[0].toFixed(1)}, ${meetingPoint[1].toFixed(1)}). Both parties are navigating there.`);
   };
 
+  // Calculate meeting point in the yard with routes and directions
+  const calculateYardMeetingPoint = (request, assignedGuards) => {
+    const userPos = request.location;
+
+    // Calculate central meeting point in the yard
+    const meetingPoint = [-26.190, 28.030]; // Central yard location
+
+    // Clear existing routes
+    if (routingControl) {
+      routingControl.forEach(route => {
+        mapRef.current.removeLayer(route);
+      });
+      setRoutingControl(null);
+    }
+    if (routingMachineControl) {
+      mapRef.current.removeControl(routingMachineControl);
+      setRoutingMachineControl(null);
+    }
+
+    const directions = [];
+
+    // Create route for user to meeting point using routing machine
+    const userControl = L.Routing.control({
+      waypoints: [
+        L.latLng(userPos[0], userPos[1]),
+        L.latLng(meetingPoint[0], meetingPoint[1])
+      ],
+      routeWhileDragging: false,
+      createMarker: () => null,
+      lineOptions: {
+        styles: [{ color: 'blue', weight: 4, opacity: 0.8 }]
+      }
+    }).addTo(mapRef.current);
+
+    // Style the routing instructions to have black text and blurred background
+    setTimeout(() => {
+      const routingContainers = mapRef.current?.getContainer()?.querySelectorAll('.leaflet-routing-container');
+      routingContainers.forEach(container => {
+        container.style.color = '#000000';
+        container.style.fontWeight = 'bold';
+        container.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        container.style.backdropFilter = 'blur(8px)';
+        container.style.WebkitBackdropFilter = 'blur(8px)';
+        container.style.borderRadius = '6px';
+        container.style.padding = '8px';
+        container.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+        const instructions = container.querySelectorAll('.leaflet-routing-alt, .leaflet-routing-instruction');
+        instructions.forEach(el => {
+          el.style.color = '#000000';
+          el.style.fontWeight = 'bold';
+        });
+      });
+    }, 100);
+
+    // Generate user directions
+    const userDirections = generateTextDirections(userPos, meetingPoint, 'You');
+    directions.push(...userDirections);
+
+    // Create routes for each assigned security guard
+    const guardControls = [];
+    assignedGuards.forEach((guard, index) => {
+      const guardPos = guard.gpsCoordinates;
+      const guardControl = L.Routing.control({
+        waypoints: [
+          L.latLng(guardPos[0], guardPos[1]),
+          L.latLng(meetingPoint[0], meetingPoint[1])
+        ],
+        routeWhileDragging: false,
+        createMarker: () => null,
+        lineOptions: {
+          styles: [{ color: index === 0 ? 'red' : 'orange', weight: 4, opacity: 0.8 }]
+        }
+      }).addTo(mapRef.current);
+      guardControls.push(guardControl);
+
+      // Generate guard directions
+      const guardDirections = generateTextDirections(guardPos, meetingPoint, guard.name);
+      directions.push(...guardDirections);
+    });
+
+    setRoutingMachineControl([userControl, ...guardControls]);
+    setTextDirections(directions);
+    setActiveRoute({
+      type: 'yard_meeting',
+      meetingPoint,
+      controls: [userControl, ...guardControls],
+      directions
+    });
+
+    // Accessibility announcement
+    const message = `Meeting point set in the campus yard. Security guards are on their way.`;
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(message);
+      window.speechSynthesis.speak(utterance);
+    }
+
+    alert(`Meeting point set in the campus yard at central location. ${assignedGuards.length} security guard(s) are navigating there.`);
+  };
+
   // Accept help request (for security)
   const handleAcceptHelpRequest = (requestId) => {
     const request = helpRequests.find(r => r.id === requestId);
@@ -384,20 +748,92 @@ const Map = () => {
     setShowCrowdDensity(!showCrowdDensity);
   };
 
-  // Handle building selection
+  // Handle building selection with path display
   const handleBuildingClick = (building) => {
-    setSelectedBuilding(building);
-    setViewMode('building');
-    setCurrentFloor('ground');
-    // Reset routing and help requests when switching views
+    if (!userLocation) {
+      alert('Unable to determine your location.');
+      return;
+    }
+
+    // Clear existing routes
     if (routingControl) {
       routingControl.forEach(route => {
         mapRef.current.removeLayer(route);
       });
       setRoutingControl(null);
     }
-    setActiveRoute(null);
-    setActiveHelpRequest(null);
+    if (routingMachineControl) {
+      if (Array.isArray(routingMachineControl)) {
+        routingMachineControl.forEach(control => {
+          mapRef.current.removeControl(control);
+        });
+      } else {
+        mapRef.current.removeControl(routingMachineControl);
+      }
+      setRoutingMachineControl(null);
+    }
+
+    // Create route to building
+    const control = L.Routing.control({
+      waypoints: [
+        L.latLng(userLocation[0], userLocation[1]),
+        L.latLng(building.coordinates[0], building.coordinates[1])
+      ],
+      routeWhileDragging: false,
+      createMarker: () => null,
+      lineOptions: {
+        styles: [{ color: 'purple', weight: 4, opacity: 0.8 }]
+      }
+    }).addTo(mapRef.current);
+
+    setRoutingMachineControl(control);
+
+    // Style the routing instructions to have black text and blurred background
+    setTimeout(() => {
+      const routingContainer = mapRef.current?.getContainer()?.querySelector('.leaflet-routing-container');
+      if (routingContainer) {
+        routingContainer.style.color = '#000000';
+        routingContainer.style.fontWeight = 'bold';
+        routingContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        routingContainer.style.backdropFilter = 'blur(8px)';
+        routingContainer.style.WebkitBackdropFilter = 'blur(8px)';
+        routingContainer.style.borderRadius = '6px';
+        routingContainer.style.padding = '8px';
+        routingContainer.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+        const instructions = routingContainer.querySelectorAll('.leaflet-routing-alt, .leaflet-routing-instruction');
+        instructions.forEach(el => {
+          el.style.color = '#000000';
+          el.style.fontWeight = 'bold';
+        });
+      }
+    }, 100);
+
+    // Generate directions to building
+    const directions = generateBuildingDirections(userLocation, building.coordinates, building.name);
+    setTextDirections(directions);
+    setActiveRoute({
+      type: 'building_path',
+      destination: building,
+      directions
+    });
+
+    // Don't switch to building view to avoid map disappearing
+    // setSelectedBuilding(building);
+    // setViewMode('building');
+    // setCurrentFloor('ground');
+  };
+
+  // Generate directions to building
+  const generateBuildingDirections = (start, end, buildingName) => {
+    const directions = [];
+    const distance = calculateDistance(start, end);
+
+    directions.push(`You: Start at your current location.`);
+    directions.push(`You: Head towards ${buildingName} (${Math.round(distance)} meters away).`);
+    directions.push(`You: Follow the highlighted purple route on the map.`);
+    directions.push(`You: ${buildingName} is marked with a building icon.`);
+
+    return directions;
   };
 
   // Return to campus view
@@ -412,8 +848,13 @@ const Map = () => {
       });
       setRoutingControl(null);
     }
+    if (routingMachineControl) {
+      mapRef.current.removeControl(routingMachineControl);
+      setRoutingMachineControl(null);
+    }
     setActiveRoute(null);
     setActiveHelpRequest(null);
+    setTextDirections([]);
   };
 
   return (
@@ -422,7 +863,7 @@ const Map = () => {
 
       {/* Navigation and control buttons */}
       <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {viewMode === 'building' && (
+        {(viewMode === 'building' || viewMode === 'yard') && (
           <button
             onClick={handleBackToCampus}
             style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
@@ -460,7 +901,7 @@ const Map = () => {
           </div>
         )}
 
-        {user?.role === 'student' && viewMode === 'building' && (
+        {user?.role === 'student' && (viewMode === 'campus' || viewMode === 'building' || viewMode === 'yard') && (
           <button
             onClick={handleRequestHelp}
             style={{ backgroundColor: '#007bff', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
@@ -469,6 +910,22 @@ const Map = () => {
             🆘 Request Help
           </button>
         )}
+
+        <button
+          onClick={handleGetDirectionsToSafePlaces}
+          style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+          aria-label="Get directions to safe places"
+        >
+          🏠 Get Directions to Safe Places
+        </button>
+
+        <button
+          onClick={handleContactSecurity}
+          style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+          aria-label="Contact security"
+        >
+          👮 Contact Security
+        </button>
 
         {(user?.role === 'security' || user?.role === 'admin') && (
           <button
@@ -491,15 +948,88 @@ const Map = () => {
 
       {activeRoute && (
         <div style={{
-          backgroundColor: activeRoute.type === 'panic' ? '#f8d7da' : '#d1ecf1',
-          border: `1px solid ${activeRoute.type === 'panic' ? '#f5c6cb' : '#bee5eb'}`,
+          backgroundColor: activeRoute.type === 'panic' ? '#f8d7da' :
+                          activeRoute.type === 'yard_meeting' ? '#d4edda' :
+                          activeRoute.type === 'safe_space' ? '#d1ecf1' :
+                          activeRoute.type === 'contact_security' ? '#f8d7da' : '#d1ecf1',
+          border: `1px solid ${activeRoute.type === 'panic' ? '#f5c6cb' :
+                              activeRoute.type === 'yard_meeting' ? '#c3e6cb' :
+                              activeRoute.type === 'safe_space' ? '#bee5eb' :
+                              activeRoute.type === 'contact_security' ? '#f5c6cb' : '#bee5eb'}`,
           padding: '10px',
           marginBottom: '10px',
           borderRadius: '4px'
         }}>
-          <strong>{activeRoute.type === 'panic' ? '🚨 Panic Alert Route' : '🆘 Help Request Route'}:</strong> Navigating to meeting point
+          <strong>
+            {activeRoute.type === 'panic' ? '🚨 Panic Alert Route' :
+             activeRoute.type === 'yard_meeting' ? '🆘 Campus Yard Help Request' :
+             activeRoute.type === 'safe_space' ? '🏠 Safe Space Directions' :
+             activeRoute.type === 'contact_security' ? '👮 Security Contact Route' :
+             activeRoute.type === 'building_path' ? '🏢 Building Directions' :
+             ' Help Request Route'}
+          </strong>
+          {activeRoute.type === 'safe_space' && activeRoute.destination && `: Directions to ${activeRoute.destination.name}`}
+          {activeRoute.type === 'contact_security' && activeRoute.destination && `: Contacting ${activeRoute.destination.name}`}
+          {activeRoute.type === 'building_path' && activeRoute.destination && `: Directions to ${activeRoute.destination.name}`}
+          {(activeRoute.type === 'yard_meeting' || activeRoute.type === 'meeting') && ': Navigating to meeting point'}
         </div>
       )}
+
+        {textDirections.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
+            border: '2px solid rgba(0, 0, 0, 0.2)',
+            padding: '12px',
+            borderRadius: '8px',
+            maxWidth: '300px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            zIndex: 1000,
+            color: '#000000 !important',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <strong style={{
+              color: '#000000 !important',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              textShadow: 'none',
+              backgroundColor: 'transparent',
+              display: 'block',
+              marginBottom: '8px'
+            }}>
+              <span style={{
+                color: '#000000',
+                fontWeight: 'bold'
+              }}>📋</span>
+              <span style={{
+                color: '#000000',
+                fontWeight: 'bold'
+              }}> Directions:</span>
+            </strong>
+            <ul style={{
+              marginTop: '8px',
+              paddingLeft: '20px',
+              color: '#000000 !important',
+              lineHeight: '1.4',
+              fontWeight: '500'
+            }}>
+              {textDirections.map((direction, index) => (
+                <li key={index} style={{
+                  marginBottom: '4px',
+                  color: '#000000 !important',
+                  fontWeight: '500'
+                }}>{direction}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
       {currentLoadshedding && (
         <div style={{
@@ -570,16 +1100,17 @@ const Map = () => {
         height: window.innerWidth < 768 ? '300px' : '500px',
         border: '1px solid #ccc',
         borderRadius: '4px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}>
         <MapContainer
-          center={viewMode === 'campus' ? [-26.190, 28.030] : [50, 50]}
-          zoom={viewMode === 'campus' ? 16 : 2}
+          center={viewMode === 'campus' ? [-26.190, 28.030] : viewMode === 'yard' ? [-26.190, 28.030] : [50, 50]}
+          zoom={viewMode === 'campus' ? 16 : viewMode === 'yard' ? 17 : 2}
           style={{ height: '100%', width: '100%' }}
           ref={mapRef}
-          maxBounds={viewMode === 'campus' ? campusBounds : [[0, 0], [100, 100]]}
+          maxBounds={viewMode === 'campus' || viewMode === 'yard' ? campusBounds : [[0, 0], [100, 100]]}
           maxBoundsViscosity={1.0}
-          crs={viewMode === 'campus' ? L.CRS.EPSG3857 : L.CRS.Simple}
+          crs={viewMode === 'campus' || viewMode === 'yard' ? L.CRS.EPSG3857 : L.CRS.Simple}
         >
           {viewMode === 'campus' ? (
             // Campus view with OpenStreetMap tiles
@@ -631,6 +1162,47 @@ const Map = () => {
                   </Popup>
                 </Marker>
               ))}
+            </>
+          ) : viewMode === 'yard' ? (
+            // Yard view - simplified campus without buildings
+            <>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+
+              {/* User Location */}
+              {userLocation && (
+                <Marker position={userLocation}>
+                  <Popup>
+                    <strong>You are here</strong><br />
+                    Campus Yard
+                  </Popup>
+                </Marker>
+              )}
+
+              {/* Security Guards in yard */}
+              {activeHelpRequest?.assignedSecurity?.map(guardId => {
+                const guard = securityLocations.find(g => g.id === guardId);
+                return guard ? (
+                  <Marker key={guard.id} position={guard.gpsCoordinates} icon={securityIcon}>
+                    <Popup>
+                      <strong>{guard.name}</strong><br />
+                      Security Guard - On the way
+                    </Popup>
+                  </Marker>
+                ) : null;
+              })}
+
+              {/* Meeting Point */}
+              {activeRoute?.type === 'yard_meeting' && (
+                <Marker position={activeRoute.meetingPoint}>
+                  <Popup>
+                    <strong>📍 Meeting Point</strong><br />
+                    Central yard location
+                  </Popup>
+                </Marker>
+              )}
             </>
           ) : (
             // Building interior view

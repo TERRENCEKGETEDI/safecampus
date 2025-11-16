@@ -197,8 +197,27 @@ const Chatbot = () => {
     }
   }, [messages]);
 
+  // Load chat history from localStorage on component mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('chatMessages');
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages));
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change (only if there are messages)
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   return (
-    <div style={{ padding: '10px', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '10px', height: '400px', display: 'flex', flexDirection: 'column' }}>
       <div
         ref={chatBoxRef}
         style={{

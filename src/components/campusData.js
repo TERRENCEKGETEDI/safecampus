@@ -268,10 +268,10 @@ export const buildingFloorPlans = {
 
 // Security locations across campus
 export const securityLocations = [
-  { id: 'security_main', name: 'Main Security Office', building: 'security_center', floor: 'ground', coordinates: [25, 22.5], type: 'stationary' },
-  { id: 'security_guard_1', name: 'Security Guard 1', building: 'academic_hall_a', floor: 'ground', coordinates: [50, 25], type: 'mobile' },
-  { id: 'security_guard_2', name: 'Security Guard 2', building: 'library', floor: 'ground', coordinates: [60, 25], type: 'mobile' },
-  { id: 'security_guard_3', name: 'Security Guard 3', building: 'dormitory_a', floor: 'ground', coordinates: [40, 17.5], type: 'mobile' }
+  { id: 'security_main', name: 'Main Security Office', building: 'security_center', floor: 'ground', coordinates: [25, 22.5], gpsCoordinates: [-26.191, 28.027], type: 'stationary' },
+  { id: 'security_guard_1', name: 'Security Guard 1', building: 'academic_hall_a', floor: 'ground', coordinates: [50, 25], gpsCoordinates: [-26.1895, 28.0295], type: 'mobile' },
+  { id: 'security_guard_2', name: 'Security Guard 2', building: 'library', floor: 'ground', coordinates: [60, 25], gpsCoordinates: [-26.1875, 28.0275], type: 'mobile' },
+  { id: 'security_guard_3', name: 'Security Guard 3', building: 'dormitory_a', floor: 'ground', coordinates: [40, 17.5], gpsCoordinates: [-26.1855, 28.0345], type: 'mobile' }
 ];
 
 // Safe zones across campus
