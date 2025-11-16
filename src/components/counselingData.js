@@ -782,7 +782,7 @@ export const sampleUsers = [
   {
     id: 'student_1',
     email: 'alice.thompson@student.univ.edu',
-    password: 'password123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'student',
     name: 'Alice Thompson',
     studentId: '123456'
@@ -790,7 +790,7 @@ export const sampleUsers = [
   {
     id: 'student_2',
     email: 'bob.johnson@student.univ.edu',
-    password: 'password123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'student',
     name: 'Bob Johnson',
     studentId: '123457'
@@ -799,14 +799,14 @@ export const sampleUsers = [
   {
     id: 'therapist_1',
     email: 'emily.carter@univ.edu',
-    password: 'therapist123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'therapist',
     name: 'Dr. Emily Carter'
   },
   {
     id: 'therapist_2',
     email: 'michael.reyes@univ.edu',
-    password: 'therapist123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'therapist',
     name: 'Dr. Michael Reyes'
   },
@@ -814,14 +814,14 @@ export const sampleUsers = [
   {
     id: 'security_1',
     email: 'john.smith@security.univ.edu',
-    password: 'security123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'security',
     name: 'Officer John Smith'
   },
   {
     id: 'security_2',
     email: 'maria.lopez@security.univ.edu',
-    password: 'security123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'security',
     name: 'Officer Maria Lopez'
   },
@@ -829,14 +829,14 @@ export const sampleUsers = [
   {
     id: 'admin_1',
     email: 'admin1@univ.edu',
-    password: 'admin123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'admin',
     name: 'Admin User 1'
   },
   {
     id: 'admin_2',
     email: 'admin2@univ.edu',
-    password: 'admin123',
+    password: '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e', // hashed 'qqq111'
     role: 'admin',
     name: 'Admin User 2'
   }

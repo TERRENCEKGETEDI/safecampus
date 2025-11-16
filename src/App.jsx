@@ -23,6 +23,9 @@ import Chatbot from './components/Chatbot.jsx';
 import HelpCenter from './components/HelpCenter.jsx';
 import MissingPersonReport from './components/MissingPersonReport.jsx';
 import MissingPersonManagement from './components/MissingPersonManagement.jsx';
+import MoodDiary from './components/MoodDiary.jsx';
+import SelfHelpLibrary from './components/SelfHelpLibrary.jsx';
+import EmergencySupport from './components/EmergencySupport.jsx';
 import './App.css';
 
 function App() {
@@ -54,6 +57,9 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/chatbot" element={<ProtectedRoute><Chatbot /></ProtectedRoute>} />
               <Route path="/help" element={<ProtectedRoute><HelpCenter /></ProtectedRoute>} />
+              <Route path="/mood-diary" element={<ProtectedRoute requiredRole="student"><MoodDiary /></ProtectedRoute>} />
+              <Route path="/self-help" element={<ProtectedRoute requiredRole="student"><SelfHelpLibrary /></ProtectedRoute>} />
+              <Route path="/emergency" element={<ProtectedRoute requiredRole="student"><EmergencySupport /></ProtectedRoute>} />
               {/* Add more routes as needed */}
             </Routes>
           </main>
@@ -68,9 +74,9 @@ function Home() {
   return (
     <div className="landing-page">
       <section className="hero">
-        <h1>Welcome to SafeCampus</h1>
-        <p>A comprehensive GBV Prevention & Reporting System for campus safety.</p>
-        <p>Empowering students with tools for reporting, therapy, community support, and emergency response.</p>
+        <h1>Welcome to MindWell Campus</h1>
+        <p>A comprehensive Mental Health Support System for campus wellness.</p>
+        <p>Empowering students with tools for mental health tracking, therapy, community support, and emergency resources.</p>
         <div className="hero-buttons">
           <button onClick={() => window.location.href='/register'}>Sign Up</button>
           <button onClick={() => window.location.href='/login'}>Login</button>
@@ -82,12 +88,12 @@ function Home() {
         <a href="#contact">Contact</a>
       </nav>
       <section id="about" className="about">
-        <h2>About SafeCampus</h2>
-        <p>SafeCampus provides a safe environment for reporting gender-based violence, booking therapy sessions, participating in community forums, and accessing safety maps.</p>
+        <h2>About MindWell Campus</h2>
+        <p>MindWell Campus provides a supportive environment for mental health monitoring, booking therapy sessions, accessing self-help resources, AI-powered chat support, and emergency mental health assistance.</p>
       </section>
       <section id="contact" className="contact">
         <h2>Contact Us</h2>
-        <p>For support, email support@safecampus.com</p>
+        <p>For support, email support@mindwellcampus.com</p>
       </section>
     </div>
   );

@@ -13,6 +13,8 @@ const NotificationBell = () => {
       loadNotifications();
       // Check for new notifications every 30 seconds
       const interval = setInterval(loadNotifications, 30000);
+      // Send automated mental health notifications
+      sendAutomatedNotifications();
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -52,6 +54,85 @@ const NotificationBell = () => {
     loadNotifications();
   };
 
+  const sendAutomatedNotifications = () => {
+    if (!user || user.role !== 'student') return;
+
+    const lastMoodCheckin = localStorage.getItem(`lastMoodCheckin_${user.id}`);
+    const now = new Date();
+    const today = now.toDateString();
+
+    // Send mood check-in reminder if not done today
+    if (!lastMoodCheckin || lastMoodCheckin !== today) {
+      const moodCheckinSent = localStorage.getItem(`moodCheckinSent_${user.id}_${today}`);
+      if (!moodCheckinSent) {
+        sendNotification(user.id, 'How are you feeling today? Take a moment to log your mood in the diary.', 'mood-checkin');
+        localStorage.setItem(`moodCheckinSent_${user.id}_${today}`, 'true');
+      }
+    }
+
+    // Check for upcoming appointments and send reminders
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    const userAppointments = appointments.filter(a => a.studentId === user.id && a.status === 'confirmed');
+    userAppointments.forEach(appointment => {
+      const appointmentDate = new Date(appointment.startTime);
+      const timeDiff = appointmentDate - now;
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+      // Send reminder 24 hours before
+      if (hoursDiff <= 24 && hoursDiff > 23) {
+        const reminderSent = localStorage.getItem(`reminderSent_${appointment.id}`);
+        if (!reminderSent) {
+          sendNotification(user.id, `Reminder: You have a therapy session tomorrow at ${appointmentDate.toLocaleTimeString()}`, 'reminder', true);
+          localStorage.setItem(`reminderSent_${appointment.id}`, 'true');
+        }
+      }
+    });
+
+    // Send daily motivation (random chance to avoid spam)
+    const motivationSent = localStorage.getItem(`motivationSent_${user.id}_${today}`);
+    if (!motivationSent && Math.random() < 0.3) { // 30% chance
+      const quotes = [
+        "You are stronger than you think. Keep going! 🌟",
+        "Every small step counts towards better mental health. 💪",
+        "Your feelings are valid. You're not alone in this journey. 🤝",
+        "Self-care is not selfish, it's necessary. Take care of yourself today. 🌸"
+      ];
+      const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+      sendNotification(user.id, randomQuote, 'motivation');
+      localStorage.setItem(`motivationSent_${user.id}_${today}`, 'true');
+    }
+  };
+
+  const sendNotification = (userId, message, type, sendEmail = false) => {
+    const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    notifications.push({
+      id: Date.now().toString(),
+      userId,
+      message,
+      date: new Date().toISOString(),
+      type,
+      read: false
+    });
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+
+    if (sendEmail) {
+      sendEmailNotification(userId, message, type);
+    }
+  };
+
+  const sendEmailNotification = (userId, message, type) => {
+    // Mock email sending - in real app, this would call an email service
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const recipient = users.find(u => u.id === userId);
+    if (recipient) {
+      console.log(`📧 EMAIL SENT to ${recipient.email}: ${message}`);
+      // In demo, show alert
+      if (Math.random() < 0.1) { // 10% chance to show demo email
+        alert(`📧 Demo Email Sent: ${message}`);
+      }
+    }
+  };
+
   const getFilteredNotifications = () => {
     if (filter === 'all') return notifications;
     return notifications.filter(n => n.type === filter);
@@ -69,6 +150,9 @@ const NotificationBell = () => {
       case 'message': return '💬';
       case 'reminder': return '⏰';
       case 'system': return '⚙️';
+      case 'mood-checkin': return '📊';
+      case 'motivation': return '🌟';
+      case 'resource': return '📚';
       default: return '🔔';
     }
   };
@@ -195,6 +279,9 @@ const NotificationBell = () => {
               <option value="therapy">Therapy Sessions</option>
               <option value="message">Messages</option>
               <option value="reminder">Reminders</option>
+              <option value="mood-checkin">Mood Check-ins</option>
+              <option value="motivation">Motivational Quotes</option>
+              <option value="resource">Resources</option>
               <option value="system">System Updates</option>
             </select>
           </div>

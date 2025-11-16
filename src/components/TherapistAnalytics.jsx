@@ -1,10 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { Line, Bar, Pie } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const TherapistAnalytics = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({});
   const [trends, setTrends] = useState({});
+  const [chartData, setChartData] = useState({});
 
   useEffect(() => {
     loadAnalytics();
@@ -59,6 +85,63 @@ const TherapistAnalytics = () => {
       peakBookingTimes: 'Monday 2-4 PM, Wednesday 10 AM-12 PM',
       commonReasons: ['Exam stress', 'Relationship issues', 'Anxiety', 'Depression']
     });
+
+    // Generate chart data
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      last7Days.push(date.toLocaleDateString());
+    }
+
+    // Session count over last 7 days (mock data)
+    const sessionCounts = last7Days.map(() => Math.floor(Math.random() * 5) + 1);
+
+    // Mood trends from clients (mock data)
+    const moodTrends = {
+      labels: last7Days,
+      datasets: [
+        {
+          label: 'Average Client Mood',
+          data: last7Days.map(() => Math.floor(Math.random() * 5) + 4), // 4-8 range
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1,
+        },
+        {
+          label: 'Anxiety Levels',
+          data: last7Days.map(() => Math.floor(Math.random() * 4) + 2), // 2-5 range
+          borderColor: 'rgb(255, 99, 132)',
+          tension: 0.1,
+        },
+      ],
+    };
+
+    // Session types pie chart
+    const sessionTypesData = {
+      labels: ['Online', 'Physical', 'Completed', 'Pending'],
+      datasets: [{
+        data: [onlineSessions.length, physicalSessions.length, therapistAppointments.filter(a => a.status === 'completed').length, therapistAppointments.filter(a => a.status === 'requested').length],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(255, 99, 132, 1)',
+        ],
+        borderWidth: 1,
+      }],
+    };
+
+    setChartData({
+      moodTrends,
+      sessionTypesData,
+      sessionCounts
+    });
   };
 
   return (
@@ -99,6 +182,20 @@ const TherapistAnalytics = () => {
           <div className="stat-card">
             <h4>Pending Sessions</h4>
             <p className="stat-number">{stats.pendingSessions}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="charts-section">
+        <h3>Data Visualizations</h3>
+        <div className="charts-grid">
+          <div className="chart-card">
+            <h4>Client Mood Trends</h4>
+            {chartData.moodTrends ? <Line data={chartData.moodTrends} /> : <p>Loading chart...</p>}
+          </div>
+          <div className="chart-card">
+            <h4>Session Types Distribution</h4>
+            {chartData.sessionTypesData ? <Pie data={chartData.sessionTypesData} /> : <p>Loading chart...</p>}
           </div>
         </div>
       </div>

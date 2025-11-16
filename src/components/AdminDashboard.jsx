@@ -31,6 +31,10 @@ const AdminDashboard = () => {
     url: ''
   });
   const [deleteReason, setDeleteReason] = useState('');
+  const [therapists, setTherapists] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loginAttempts, setLoginAttempts] = useState([]);
+  const [flaggedActivities, setFlaggedActivities] = useState([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -46,6 +50,9 @@ const AdminDashboard = () => {
   const loadData = () => {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     setUsers(allUsers);
+    const therapistUsers = allUsers.filter(u => u.role === 'therapist');
+    setTherapists(therapistUsers);
+
     const forumPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
     // Add author names to posts for display
     const postsWithAuthors = forumPosts.map(post => ({
@@ -58,6 +65,43 @@ const AdminDashboard = () => {
     setResources(JSON.parse(localStorage.getItem('resources') || '[]'));
     setSystemSettings(JSON.parse(localStorage.getItem('systemSettings') || '{}'));
     setAuditLogs(JSON.parse(localStorage.getItem('auditLogs') || '[]'));
+
+    // Load categories
+    const allCategories = JSON.parse(localStorage.getItem('categories') || '["stress", "depression", "study", "relationships", "anxiety", "sleep", "self-esteem"]');
+    setCategories(allCategories);
+
+    // Load login attempts (mock data)
+    const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '[]');
+    if (attempts.length === 0) {
+      // Generate mock login attempts
+      const mockAttempts = [];
+      for (let i = 0; i < 20; i++) {
+        mockAttempts.push({
+          id: i.toString(),
+          email: allUsers[Math.floor(Math.random() * allUsers.length)]?.email || 'unknown',
+          timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+          success: Math.random() > 0.1,
+          ip: `192.168.1.${Math.floor(Math.random() * 255)}`
+        });
+      }
+      localStorage.setItem('loginAttempts', JSON.stringify(mockAttempts));
+      setLoginAttempts(mockAttempts);
+    } else {
+      setLoginAttempts(attempts);
+    }
+
+    // Load flagged activities (mock data)
+    const flagged = JSON.parse(localStorage.getItem('flaggedActivities') || '[]');
+    if (flagged.length === 0) {
+      const mockFlagged = [
+        { id: '1', type: 'post', content: 'Inappropriate content in forum', userId: allUsers[0]?.id, timestamp: new Date().toISOString(), status: 'pending' },
+        { id: '2', type: 'chat', content: 'Potential self-harm indicators', userId: allUsers[1]?.id, timestamp: new Date().toISOString(), status: 'reviewed' }
+      ];
+      localStorage.setItem('flaggedActivities', JSON.stringify(mockFlagged));
+      setFlaggedActivities(mockFlagged);
+    } else {
+      setFlaggedActivities(flagged);
+    }
   };
 
   const filterUsers = () => {
@@ -238,7 +282,17 @@ const AdminDashboard = () => {
       return signupDate > weekAgo;
     }).length;
 
-    return { totalUsers, usersByRole, suspendedUsers, recentSignups };
+    // Mental health specific analytics
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    const therapistSessions = appointments.length;
+    const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
+    const aiConversations = aiChats.length;
+    const moodEntries = users.filter(u => u.role === 'student').reduce((sum, user) => {
+      const entries = JSON.parse(localStorage.getItem(`moodEntries_${user.id}`) || '[]');
+      return sum + entries.length;
+    }, 0);
+
+    return { totalUsers, usersByRole, suspendedUsers, recentSignups, therapistSessions, aiConversations, moodEntries };
   };
 
   const analytics = getAnalytics();
@@ -284,6 +338,20 @@ const AdminDashboard = () => {
         >
           <span className="tab-icon">⚙️</span>
           System Controls
+        </button>
+        <button
+          onClick={() => setActiveTab('therapists')}
+          className={`tab-button ${activeTab === 'therapists' ? 'active' : ''}`}
+        >
+          <span className="tab-icon">🩺</span>
+          Therapists
+        </button>
+        <button
+          onClick={() => setActiveTab('security')}
+          className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
+        >
+          <span className="tab-icon">🔒</span>
+          Security
         </button>
         <button
           onClick={() => setActiveTab('audit')}
@@ -371,6 +439,33 @@ const AdminDashboard = () => {
                 <h4>Forum Activity</h4>
                 <div className="metric">{posts.length}</div>
                 <span className="status">Total posts</span>
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="card-icon">🩺</div>
+              <div className="card-content">
+                <h4>Therapy Sessions</h4>
+                <div className="metric">{analytics.therapistSessions}</div>
+                <span className="status">Total sessions</span>
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="card-icon">🤖</div>
+              <div className="card-content">
+                <h4>AI Conversations</h4>
+                <div className="metric">{analytics.aiConversations}</div>
+                <span className="status">Chat interactions</span>
+              </div>
+            </div>
+
+            <div className="overview-card">
+              <div className="card-icon">📊</div>
+              <div className="card-content">
+                <h4>Mood Entries</h4>
+                <div className="metric">{analytics.moodEntries}</div>
+                <span className="status">Student tracking</span>
               </div>
             </div>
           </div>
@@ -718,6 +813,136 @@ const AdminDashboard = () => {
               Send System Notification
             </button>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'therapists' && (
+        <div className="therapists-section">
+          <h3>Therapist Management</h3>
+          <div className="therapists-list">
+            {therapists.map(therapist => (
+              <div key={therapist.id} className="therapist-card">
+                <h4>{therapist.name}</h4>
+                <p>Email: {therapist.email}</p>
+                <p>Specialty: {therapist.specialty || 'General'}</p>
+                <div className="therapist-actions">
+                  <button onClick={() => handleUpdateUser(therapist.id, { specialty: prompt('New specialty:', therapist.specialty) })}>
+                    Update Specialty
+                  </button>
+                  <button onClick={() => handleSuspendUser(therapist.id, !therapist.suspended)}>
+                    {therapist.suspended ? 'Activate' : 'Suspend'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setShowCreateUser(true)} className="add-therapist-btn">Add New Therapist</button>
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="security-section">
+          <h3>Security & Monitoring</h3>
+
+          <div className="security-tabs">
+            <button onClick={() => setContentSubTab('attempts')} className={contentSubTab === 'attempts' ? 'active' : ''}>Login Attempts</button>
+            <button onClick={() => setContentSubTab('flagged')} className={contentSubTab === 'flagged' ? 'active' : ''}>Flagged Activities</button>
+            <button onClick={() => setContentSubTab('health')} className={contentSubTab === 'health' ? 'active' : ''}>System Health</button>
+          </div>
+
+          {contentSubTab === 'attempts' && (
+            <div className="login-attempts">
+              <h4>Recent Login Attempts</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Timestamp</th>
+                    <th>Success</th>
+                    <th>IP Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loginAttempts.slice(0, 20).map(attempt => (
+                    <tr key={attempt.id}>
+                      <td>{attempt.email}</td>
+                      <td>{new Date(attempt.timestamp).toLocaleString()}</td>
+                      <td>{attempt.success ? '✅' : '❌'}</td>
+                      <td>{attempt.ip}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {contentSubTab === 'flagged' && (
+            <div className="flagged-activities">
+              <h4>Flagged Activities</h4>
+              {flaggedActivities.map(activity => (
+                <div key={activity.id} className="flagged-item">
+                  <h5>{activity.type.toUpperCase()}: {activity.content}</h5>
+                  <p>User: {users.find(u => u.id === activity.userId)?.name}</p>
+                  <p>Time: {new Date(activity.timestamp).toLocaleString()}</p>
+                  <p>Status: {activity.status}</p>
+                  <button onClick={() => {
+                    const updated = flaggedActivities.map(a =>
+                      a.id === activity.id ? { ...a, status: 'reviewed' } : a
+                    );
+                    setFlaggedActivities(updated);
+                    localStorage.setItem('flaggedActivities', JSON.stringify(updated));
+                  }}>
+                    Mark as Reviewed
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {contentSubTab === 'health' && (
+            <div className="system-health">
+              <h4>System Health Dashboard</h4>
+              <div className="health-metrics">
+                <div className="metric">
+                  <h5>Server Status</h5>
+                  <span className="status healthy">🟢 Online</span>
+                </div>
+                <div className="metric">
+                  <h5>Database</h5>
+                  <span className="status healthy">🟢 Connected</span>
+                </div>
+                <div className="metric">
+                  <h5>API Response Time</h5>
+                  <span>245ms</span>
+                </div>
+                <div className="metric">
+                  <h5>Active Sessions</h5>
+                  <span>{users.filter(u => !u.suspended).length}</span>
+                </div>
+                <div className="metric">
+                  <h5>Failed Logins (24h)</h5>
+                  <span>{loginAttempts.filter(a => !a.success && new Date(a.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}</span>
+                </div>
+              </div>
+              <button onClick={() => alert('System backup initiated (mock)')}>Backup System Data</button>
+              <button onClick={() => {
+                const report = {
+                  timestamp: new Date().toISOString(),
+                  totalUsers: users.length,
+                  activeUsers: users.filter(u => !u.suspended).length,
+                  loginAttempts: loginAttempts.length,
+                  flaggedActivities: flaggedActivities.length
+                };
+                const dataStr = JSON.stringify(report, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'activity_report.json';
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+              }}>Download Activity Report</button>
+            </div>
+          )}
         </div>
       )}
 

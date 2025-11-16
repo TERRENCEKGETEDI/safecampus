@@ -53,17 +53,8 @@ const Dashboard = () => {
   }, [user, navigate]);
 
   const handlePanic = () => {
-    // Simulate panic alert
-    const alertData = {
-      userId: user.id,
-      location: { lat: 0, lng: 0 }, // Mock GPS
-      timestamp: new Date().toISOString(),
-    };
-    const alerts = JSON.parse(localStorage.getItem('panicAlerts') || '[]');
-    alerts.push({ ...alertData, id: Date.now().toString(), status: 'active' });
-    localStorage.setItem('panicAlerts', JSON.stringify(alerts));
-    alert('Panic alert sent!');
-    // In real, emit to Socket.IO
+    // Navigate to emergency support
+    navigate('/emergency');
   };
 
   const handleImSafe = () => {
@@ -97,6 +88,9 @@ const Dashboard = () => {
             <Link to="/missing-report">Report Missing Person</Link>
             <Link to="/reports">View Reports</Link>
             <Link to="/therapy">Book Therapy</Link>
+            <Link to="/mood-diary">Mood Diary</Link>
+            <Link to="/self-help">Self-Help Library</Link>
+            <Link to="/emergency">Emergency Support</Link>
             <Link to="/forum">Forum</Link>
             <Link to="/map">Safety Map</Link>
             <Link to="/profile">Profile</Link>

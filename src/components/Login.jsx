@@ -6,19 +6,21 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [discreetMode, setDiscreetMode] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authenticateUser } = useAuth();
 
-  const validateField = (name, value) => {
-    let error = '';
+ const validateField = (name, value) => {
+   let error = '';
+   const sanitizedValue = value.trim(); // Basic sanitization
     switch (name) {
       case 'email':
-        if (!value) error = 'Email is required';
-        else if (!/\S+@\S+\.\S+/.test(value)) error = 'Email is invalid';
+        if (!sanitizedValue) error = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(sanitizedValue)) error = 'Email is invalid';
         break;
       case 'password':
-        if (!value) error = 'Password is required';
+        if (!sanitizedValue) error = 'Password is required';
         break;
       default:
         break;
@@ -33,15 +35,25 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!isFormValid()) return;
-    // Simulate API call
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      const token = 'mock-jwt-' + user.id;
-      login(user, token);
-      navigate('/dashboard');
-    } else {
-      alert('Invalid email or password');
+    try {
+      // Authenticate user
+      const user = authenticateUser(email, password);
+      if (user) {
+        const token = 'mock-jwt-' + user.id + '-' + Date.now();
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+          // Set longer session
+          localStorage.setItem('sessionExpiry', Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        } else {
+          localStorage.setItem('sessionExpiry', Date.now() + 24 * 60 * 60 * 1000); // 1 day
+        }
+        login(user, token);
+        navigate('/dashboard');
+      } else {
+        alert('Invalid email or password');
+      }
+    } catch (error) {
+      alert(error.message);
     }
   };
 
@@ -84,6 +96,14 @@ const Login = () => {
             onChange={(e) => setDiscreetMode(e.target.checked)}
           />
           Discreet Mode
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          Remember Me
         </label>
         <button type="submit" disabled={!isFormValid()}>Log In</button>
       </form>

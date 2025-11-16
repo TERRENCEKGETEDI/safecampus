@@ -8,19 +8,21 @@ const Chatbot = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [typingText, setTypingText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
   const chatBoxRef = useRef(null);
 
   const detectKeywords = (message) => {
     const lowerMessage = message.toLowerCase();
     const keywords = [];
     if (['therapy', 'book', 'therapist', 'counseling', 'session', 'appointment', 'schedule'].some(w => lowerMessage.includes(w))) keywords.push('therapy');
-    if (['report', 'gbv', 'incident', 'complaint', 'missing', 'person'].some(w => lowerMessage.includes(w))) keywords.push('report');
+    if (['mood', 'diary', 'tracking', 'emotion', 'feeling'].some(w => lowerMessage.includes(w))) keywords.push('mood');
+    if (['self-help', 'library', 'article', 'resource', 'technique'].some(w => lowerMessage.includes(w))) keywords.push('self_help');
+    if (['stress', 'anxiety', 'depression', 'pressure', 'overwhelm'].some(w => lowerMessage.includes(w))) keywords.push('stress');
+    if (['emergency', 'crisis', 'panic', 'help', 'urgent'].some(w => lowerMessage.includes(w))) keywords.push('emergency');
     if (['password', 'reset', 'login', 'forgot', 'change'].some(w => lowerMessage.includes(w))) keywords.push('password');
     if (['profile', 'account', 'settings', 'update', 'info'].some(w => lowerMessage.includes(w))) keywords.push('profile');
     if (['forum', 'community', 'peer', 'share', 'discuss'].some(w => lowerMessage.includes(w))) keywords.push('forum');
-    if (['map', 'location', 'find', 'store', 'directions', 'navigate'].some(w => lowerMessage.includes(w))) keywords.push('map');
-    if (['help center', 'faq', 'questions', 'guide', 'tutorial'].some(w => lowerMessage.includes(w))) keywords.push('help');
-    if (['safety', 'tip', 'secure', 'danger', 'threat'].some(w => lowerMessage.includes(w))) keywords.push('safety');
     if (['mental', 'health', 'wellbeing', 'anxious', 'stressed'].some(w => lowerMessage.includes(w))) keywords.push('mental_health');
     return keywords;
   };
@@ -60,6 +62,19 @@ const Chatbot = () => {
         setMessages(prev => [...prev, botMessage]);
       }
     }, 25);
+  };
+
+  const toggleRecording = () => {
+    if (!recognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+      setIsRecording(true);
+    }
   };
 
   const getFallbackResponse = (message) => {
@@ -195,7 +210,8 @@ const Chatbot = () => {
 **Evidence-based suggestion:** Practice self-care through grounding techniques, talk openly with trusted friends or family, and consider professional help. Our campus has licensed therapists available, and resources like the 3-minute breathing exercise have scientific backing for reducing anxiety.`,
         buttons: [
           { label: 'Book Therapy', route: '/therapy' },
-          { label: 'View Resources', route: '/therapy-resources' }
+          { label: 'Mood Diary', route: '/mood-diary' },
+          { label: 'Self-Help Library', route: '/self-help' }
         ]
       };
     } else if (hasDistress) {
@@ -207,7 +223,33 @@ const Chatbot = () => {
 **Evidence-based suggestion:** Try the 3-minute breathing technique: Inhale for 4 counts, hold for 4, exhale for 4. This diaphragmatic breathing has been scientifically proven to activate the parasympathetic nervous system and reduce stress hormones.`,
         buttons: [
           { label: 'Book Therapy', route: '/therapy' },
-          { label: 'Join Forum', route: '/forum' }
+          { label: 'Mood Diary', route: '/mood-diary' },
+          { label: 'Self-Help Library', route: '/self-help' }
+        ]
+      };
+    } else if (lowerMessage.includes('mood') || lowerMessage.includes('feeling')) {
+      return {
+        text: `**What I detected:** You're asking about mood or emotions, which is great for mental health awareness.
+
+**Why I recommend this:** Tracking your mood can help identify patterns and triggers, leading to better self-understanding and coping strategies.
+
+**Evidence-based suggestion:** Our Mood Diary feature allows you to track your daily mood, energy, anxiety, and stress levels with visual graphs to see trends over time.`,
+        buttons: [
+          { label: 'Track Mood', route: '/mood-diary' },
+          { label: 'Self-Help Resources', route: '/self-help' }
+        ]
+      };
+    } else if (lowerMessage.includes('stress') || lowerMessage.includes('anxiety') || lowerMessage.includes('depression')) {
+      return {
+        text: `**What I detected:** You're mentioning stress, anxiety, or depression - these are common experiences that many students face.
+
+**Why I recommend this:** Acknowledging these feelings is the first step toward managing them. Professional support combined with self-help techniques can be very effective.
+
+**Evidence-based suggestion:** Consider booking a therapy session with one of our licensed therapists, and explore our Self-Help Library for coping techniques backed by research.`,
+        buttons: [
+          { label: 'Book Therapy', route: '/therapy' },
+          { label: 'Self-Help Library', route: '/self-help' },
+          { label: 'Mood Diary', route: '/mood-diary' }
         ]
       };
     } else if (hasSafetyConcern) {
@@ -372,6 +414,34 @@ const Chatbot = () => {
     }
   }, [messages]);
 
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(prev => prev + transcript);
+      };
+
+      recognitionInstance.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionInstance.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        alert('Speech recognition error: ' + event.error);
+      };
+
+      setRecognition(recognitionInstance);
+    }
+  }, []);
+
   // Load chat history from localStorage on component mount
   useEffect(() => {
     const savedMessages = localStorage.getItem('chatMessages');
@@ -403,8 +473,42 @@ const Chatbot = () => {
     }
   }, [messages]);
 
+  const shareConversation = () => {
+    const conversationText = messages.map(msg =>
+      `${msg.sender} (${new Date(msg.timestamp).toLocaleString()}): ${msg.content.text}`
+    ).join('\n\n');
+
+    // Store for therapist access
+    const userId = JSON.parse(localStorage.getItem('user') || 'null')?.id;
+    const sharedConversations = JSON.parse(localStorage.getItem('sharedConversations') || '[]');
+    sharedConversations.push({
+      id: Date.now().toString(),
+      userId,
+      conversation: conversationText,
+      timestamp: new Date().toISOString(),
+      status: 'unread'
+    });
+    localStorage.setItem('sharedConversations', JSON.stringify(sharedConversations));
+    alert('Conversation shared with your therapist!');
+  };
+
   return (
     <div style={{ padding: '10px', height: '600px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: '10px', textAlign: 'center' }}>
+        <button
+          onClick={shareConversation}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Share this conversation with therapist
+        </button>
+      </div>
       <div
         ref={chatBoxRef}
         style={{
@@ -521,6 +625,22 @@ const Chatbot = () => {
             overflow: 'hidden'
           }}
         />
+        <button
+          onClick={toggleRecording}
+          disabled={isStreaming}
+          style={{
+            padding: '10px',
+            fontSize: '16px',
+            borderRadius: '10px',
+            border: '1px solid #ccc',
+            cursor: isStreaming ? 'not-allowed' : 'pointer',
+            marginLeft: '10px',
+            backgroundColor: isRecording ? 'red' : '#f0f0f0'
+          }}
+          title="Voice input"
+        >
+          🎤
+        </button>
         <button
           onClick={handleSend}
           disabled={isStreaming}

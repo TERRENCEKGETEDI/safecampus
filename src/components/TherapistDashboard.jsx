@@ -17,6 +17,8 @@ const TherapistDashboard = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [clientMoodHistory, setClientMoodHistory] = useState([]);
+  const [sharedConversations, setSharedConversations] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -34,6 +36,10 @@ const TherapistDashboard = () => {
     const allMessages = JSON.parse(localStorage.getItem('therapistMessages') || '[]');
     const therapistMessages = allMessages.filter(m => m.therapistId === user.id);
     setMessages(therapistMessages);
+
+    // Load shared conversations
+    const allSharedConversations = JSON.parse(localStorage.getItem('sharedConversations') || '[]');
+    setSharedConversations(allSharedConversations);
   };
 
   const getFilteredAppointments = () => {
@@ -231,6 +237,55 @@ const TherapistDashboard = () => {
     return student ? student.studentNumber || 'N/A' : 'N/A';
   };
 
+  const loadClientMoodHistory = (studentId) => {
+    const moodHistory = JSON.parse(localStorage.getItem(`moodEntries_${studentId}`) || '[]');
+    setClientMoodHistory(moodHistory);
+  };
+
+  const sendCopingResource = (studentId, resourceTitle) => {
+    const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+    notifications.push({
+      id: Date.now().toString(),
+      userId: studentId,
+      message: `Your therapist has shared a coping resource: ${resourceTitle}`,
+      date: new Date().toISOString(),
+      type: 'resource'
+    });
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    alert('Coping resource sent to client!');
+  };
+
+  const joinVirtualSession = (appointmentId) => {
+    // Mock virtual session - in real app, this would open video chat
+    alert('Joining virtual session... (Demo: This would open a video chat interface)');
+    // Could navigate to a video session component
+  };
+
+  const generateChatSummary = (conversation) => {
+    // Simple AI summary - extract keywords and insights
+    const text = conversation.toLowerCase();
+    const keywords = [];
+    const insights = [];
+
+    if (text.includes('stress') || text.includes('anxiety')) keywords.push('stress/anxiety');
+    if (text.includes('depression') || text.includes('sad')) keywords.push('depression');
+    if (text.includes('sleep') || text.includes('insomnia')) keywords.push('sleep issues');
+    if (text.includes('exam') || text.includes('study')) keywords.push('academic pressure');
+    if (text.includes('relationship') || text.includes('friend')) keywords.push('relationship issues');
+
+    if (keywords.includes('stress/anxiety')) {
+      insights.push('Client shows signs of stress/anxiety. Recommend relaxation techniques.');
+    }
+    if (keywords.includes('depression')) {
+      insights.push('Depression indicators present. Monitor closely and suggest professional help.');
+    }
+    if (keywords.includes('sleep issues')) {
+      insights.push('Sleep disturbances mentioned. Advise sleep hygiene improvements.');
+    }
+
+    return { keywords, insights };
+  };
+
   const filteredAppointments = getFilteredAppointments();
 
   return (
@@ -295,6 +350,10 @@ const TherapistDashboard = () => {
                   <button onClick={() => sendAutomatedReminder(appointment.id, '10min')} className="reminder-btn">10min Reminder</button>
                   <button onClick={() => sendAutomatedReminder(appointment.id, 'confirmation')} className="reminder-btn">Request Confirmation</button>
                   <button onClick={() => { setSelectedStudent(appointment.studentId); setShowModal(true); setModalType('profile'); }} className="profile-btn">View Profile</button>
+                  <button onClick={() => { loadClientMoodHistory(appointment.studentId); setShowModal(true); setModalType('mood-history'); }} className="mood-btn">View Mood History</button>
+                  <button onClick={() => { setSelectedStudent(appointment.studentId); setShowModal(true); setModalType('send-resource'); }} className="resource-btn">Send Resource</button>
+                  <button onClick={() => joinVirtualSession(appointment.id)} className="session-btn">Join Session</button>
+                  <button onClick={() => { setSelectedStudent(appointment.studentId); setShowModal(true); setModalType('ai-chats'); }} className="chat-btn">View AI Chats</button>
                 </div>
               </div>
             ))}
@@ -388,6 +447,75 @@ const TherapistDashboard = () => {
                 }}>
                   {students.find(s => s.id === selectedStudent)?.highRisk ? 'Unflag High Risk' : 'Flag as High Risk'}
                 </button>
+              </>
+            )}
+            {modalType === 'mood-history' && (
+              <>
+                <h3>Client Mood History: {getStudentName(selectedStudent)}</h3>
+                {clientMoodHistory.length === 0 ? (
+                  <p>No mood entries found.</p>
+                ) : (
+                  <div className="mood-history">
+                    {clientMoodHistory.map((entry, index) => (
+                      <div key={index} className="mood-entry">
+                        <p><strong>Date:</strong> {entry.date}</p>
+                        <p><strong>Mood:</strong> {entry.mood}/10</p>
+                        <p><strong>Energy:</strong> {entry.energy}/10</p>
+                        <p><strong>Anxiety:</strong> {entry.anxiety}/10</p>
+                        <p><strong>Stress:</strong> {entry.stress}/10</p>
+                        {entry.notes && <p><strong>Notes:</strong> {entry.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            {modalType === 'send-resource' && (
+              <>
+                <h3>Send Coping Resource to {getStudentName(selectedStudent)}</h3>
+                <div className="resource-options">
+                  <button onClick={() => sendCopingResource(selectedStudent, 'Breathing Exercises for Anxiety')}>
+                    Breathing Exercises for Anxiety
+                  </button>
+                  <button onClick={() => sendCopingResource(selectedStudent, 'Grounding Techniques')}>
+                    Grounding Techniques
+                  </button>
+                  <button onClick={() => sendCopingResource(selectedStudent, 'Stress Management Guide')}>
+                    Stress Management Guide
+                  </button>
+                  <button onClick={() => sendCopingResource(selectedStudent, 'Sleep Hygiene Tips')}>
+                    Sleep Hygiene Tips
+                  </button>
+                </div>
+              </>
+            )}
+            {modalType === 'ai-chats' && (
+              <>
+                <h3>AI Chat Summaries: {getStudentName(selectedStudent)}</h3>
+                {sharedConversations.filter(conv => conv.userId === selectedStudent).length === 0 ? (
+                  <p>No shared conversations found.</p>
+                ) : (
+                  <div className="ai-chat-summaries">
+                    {sharedConversations.filter(conv => conv.userId === selectedStudent).map((conv, index) => {
+                      const summary = generateChatSummary(conv.conversation);
+                      return (
+                        <div key={index} className="chat-summary">
+                          <p><strong>Date:</strong> {new Date(conv.timestamp).toLocaleString()}</p>
+                          <p><strong>Status:</strong> {conv.status}</p>
+                          <div className="ai-insights">
+                            <h4>🤖 AI Summary:</h4>
+                            <p><strong>Keywords:</strong> {summary.keywords.join(', ') || 'None detected'}</p>
+                            <p><strong>Insights:</strong> {summary.insights.join(' ') || 'No specific insights available.'}</p>
+                          </div>
+                          <details>
+                            <summary>View Full Conversation</summary>
+                            <pre>{conv.conversation}</pre>
+                          </details>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
           </div>
