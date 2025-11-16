@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { notificationsAPI, therapyAPI, usersAPI } from '../services/dataService.js';
 
 const NotificationBell = () => {
   const { user } = useAuth();
@@ -20,61 +21,53 @@ const NotificationBell = () => {
   }, [user]);
 
   const loadNotifications = () => {
-    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    const userNotifications = allNotifications
-      .filter(n => n.userId === user.id)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const userNotifications = notificationsAPI.getUserNotifications(user.id)
+      .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
     setNotifications(userNotifications);
-    setUnreadCount(userNotifications.filter(n => !n.read).length);
+    setUnreadCount(userNotifications.filter(n => !n.isRead && !n.read).length);
   };
 
   const markAsRead = (notificationId) => {
-    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    const updatedNotifications = allNotifications.map(n =>
-      n.id === notificationId ? { ...n, read: true } : n
-    );
-    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    notificationsAPI.markAsRead(notificationId);
     loadNotifications();
   };
 
   const markAllAsRead = () => {
-    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    const updatedNotifications = allNotifications.map(n =>
-      n.userId === user.id ? { ...n, read: true } : n
-    );
-    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    const userNotifications = notificationsAPI.getUserNotifications(user.id);
+    userNotifications.forEach(notification => {
+      if (!notification.isRead && !notification.read) {
+        notificationsAPI.markAsRead(notification.id);
+      }
+    });
     loadNotifications();
   };
 
   const deleteNotification = (notificationId) => {
-    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    const updatedNotifications = allNotifications.filter(n => n.id !== notificationId);
-    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    // For this demo, we'll just mark as read since we don't have a delete API
+    // In a real implementation, you'd have a delete endpoint
+    notificationsAPI.markAsRead(notificationId);
     loadNotifications();
   };
 
   const sendAutomatedNotifications = () => {
     if (!user || user.role !== 'student') return;
 
-    const lastMoodCheckin = localStorage.getItem(`lastMoodCheckin_${user.id}`);
     const now = new Date();
     const today = now.toDateString();
 
     // Send mood check-in reminder if not done today
-    if (!lastMoodCheckin || lastMoodCheckin !== today) {
-      const moodCheckinSent = localStorage.getItem(`moodCheckinSent_${user.id}_${today}`);
-      if (!moodCheckinSent) {
-        sendNotification(user.id, 'How are you feeling today? Take a moment to log your mood in the diary.', 'mood-checkin');
-        localStorage.setItem(`moodCheckinSent_${user.id}_${today}`, 'true');
-      }
+    const moodCheckinSent = localStorage.getItem(`moodCheckinSent_${user.id}_${today}`);
+    if (!moodCheckinSent) {
+      sendNotification(user.id, 'How are you feeling today? Take a moment to log your mood in the diary.', 'mood-checkin');
+      localStorage.setItem(`moodCheckinSent_${user.id}_${today}`, 'true');
     }
 
     // Check for upcoming appointments and send reminders
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    const appointments = Object.values(therapyAPI.getAllAppointments());
     const userAppointments = appointments.filter(a => a.studentId === user.id && a.status === 'confirmed');
     userAppointments.forEach(appointment => {
-      const appointmentDate = new Date(appointment.startTime);
+      const appointmentDate = new Date(appointment.date + 'T' + appointment.time);
       const timeDiff = appointmentDate - now;
       const hoursDiff = timeDiff / (1000 * 60 * 60);
 
@@ -82,7 +75,7 @@ const NotificationBell = () => {
       if (hoursDiff <= 24 && hoursDiff > 23) {
         const reminderSent = localStorage.getItem(`reminderSent_${appointment.id}`);
         if (!reminderSent) {
-          sendNotification(user.id, `Reminder: You have a therapy session tomorrow at ${appointmentDate.toLocaleTimeString()}`, 'reminder', true);
+          sendNotification(user.id, `Reminder: You have a therapy session tomorrow at ${appointment.time}`, 'reminder', true);
           localStorage.setItem(`reminderSent_${appointment.id}`, 'true');
         }
       }
@@ -104,26 +97,67 @@ const NotificationBell = () => {
   };
 
   const sendNotification = (userId, message, type, sendEmail = false) => {
-    const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    notifications.push({
+    const notification = {
       id: Date.now().toString(),
       userId,
-      message,
-      date: new Date().toISOString(),
       type,
-      read: false
-    });
-    localStorage.setItem('notifications', JSON.stringify(notifications));
+      title: getNotificationTitle(type),
+      message,
+      priority: getNotificationPriority(type),
+      category: getNotificationCategory(type),
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      actionUrl: getNotificationActionUrl(type),
+      metadata: {}
+    };
+
+    notificationsAPI.create(notification);
 
     if (sendEmail) {
       sendEmailNotification(userId, message, type);
     }
   };
 
+  const getNotificationTitle = (type) => {
+    const titles = {
+      'mood-checkin': 'Daily Mood Check-in',
+      'reminder': 'Appointment Reminder',
+      'motivation': 'Daily Motivation'
+    };
+    return titles[type] || 'Notification';
+  };
+
+  const getNotificationPriority = (type) => {
+    const priorities = {
+      'emergency': 'critical',
+      'reminder': 'medium',
+      'mood-checkin': 'low',
+      'motivation': 'low'
+    };
+    return priorities[type] || 'medium';
+  };
+
+  const getNotificationCategory = (type) => {
+    const categories = {
+      'mood-checkin': 'wellness',
+      'reminder': 'therapy',
+      'motivation': 'wellness'
+    };
+    return categories[type] || 'system';
+  };
+
+  const getNotificationActionUrl = (type) => {
+    const urls = {
+      'mood-checkin': '/mood-diary',
+      'reminder': '/therapy/appointments'
+    };
+    return urls[type] || null;
+  };
+
   const sendEmailNotification = (userId, message, type) => {
     // Mock email sending - in real app, this would call an email service
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const recipient = users.find(u => u.id === userId);
+    const recipient = usersAPI.getById(userId);
     if (recipient) {
       console.log(`📧 EMAIL SENT to ${recipient.email}: ${message}`);
       // In demo, show alert

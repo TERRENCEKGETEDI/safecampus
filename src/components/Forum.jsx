@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { sampleUsers } from './counselingData.js';
+import { forumAPI, usersAPI } from '../services/dataService.js';
 
 const Forum = () => {
   const { user } = useAuth();
@@ -13,15 +13,15 @@ const Forum = () => {
 
   const getUserName = (userId) => {
     if (!userId) return 'Anonymous';
-    const user = sampleUsers.find(u => u.id === userId);
+    const user = usersAPI.getById(userId);
     return user ? user.name : 'Unknown User';
   };
 
   useEffect(() => {
-    const storedPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
-    const storedComments = JSON.parse(localStorage.getItem('comments') || '[]');
-    setPosts(storedPosts);
-    setComments(storedComments);
+    const storedPosts = forumAPI.getAllPosts();
+    const storedComments = forumAPI.getAllComments();
+    setPosts(Object.values(storedPosts));
+    setComments(Object.values(storedComments));
   }, []);
 
   const validatePost = () => {
@@ -51,9 +51,9 @@ const Forum = () => {
       createdAt: new Date().toISOString(),
       likes: 0,
     };
+    forumAPI.createPost(post);
     const updatedPosts = [...posts, post];
     setPosts(updatedPosts);
-    localStorage.setItem('forumPosts', JSON.stringify(updatedPosts));
     setNewPost({ title: '', body: '', isAnonymous: false, category: 'general' });
     setPostErrors({});
   };
@@ -67,16 +67,19 @@ const Forum = () => {
       body: newComment[postId] || '',
       createdAt: new Date().toISOString(),
     };
+    forumAPI.createComment(comment);
     const updatedComments = [...comments, comment];
     setComments(updatedComments);
-    localStorage.setItem('comments', JSON.stringify(updatedComments));
     setNewComment({ ...newComment, [postId]: '' });
   };
 
   const handleLike = (postId) => {
-    const updatedPosts = posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p);
-    setPosts(updatedPosts);
-    localStorage.setItem('forumPosts', JSON.stringify(updatedPosts));
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      forumAPI.updatePost(postId, { likes: post.likes + 1 });
+      const updatedPosts = posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p);
+      setPosts(updatedPosts);
+    }
   };
 
   const handleReport = (postId) => {

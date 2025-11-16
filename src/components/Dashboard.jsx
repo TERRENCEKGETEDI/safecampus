@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { reportsAPI, therapyAPI, forumAPI, notificationsAPI, usersAPI } from '../services/dataService.js';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -17,30 +18,49 @@ const Dashboard = () => {
       navigate('/login');
       return;
     }
-    // Load stats
-    const reports = JSON.parse(localStorage.getItem('reports') || '[]').filter(r => r.reporter_user_id === user.id || !r.reporter_user_id);
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]').filter(a => a.student_id === user.id);
-    const posts = JSON.parse(localStorage.getItem('forumPosts') || '[]').filter(p => p.author_id === user.id);
-    setStats({ reports: reports.length, appointments: appointments.length, posts: posts.length });
-    // Load assigned therapist for students
-    if (user.role === 'student' && user.therapistId) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const therapist = users.find(u => u.id === user.therapistId);
-      setAssignedTherapist(therapist);
+
+    // Load stats for students
+    if (user.role === 'student') {
+      const allReports = reportsAPI.getAll();
+      const incidentReports = Object.values(allReports.incident_reports || {});
+      const securityReports = Object.values(allReports.security_reports || {});
+      const missingPersonReports = Object.values(allReports.missing_person_reports || {});
+      const allReportList = [...incidentReports, ...securityReports, ...missingPersonReports];
+
+      const userReports = allReportList.filter(r => r.reporterUserId === user.id || !r.reporterUserId);
+      const userAppointments = Object.values(therapyAPI.getAllAppointments()).filter(a => a.studentId === user.id);
+      const userPosts = Object.values(forumAPI.getAllPosts()).filter(p => p.authorId === user.id);
+
+      setStats({
+        reports: userReports.length,
+        appointments: userAppointments.length,
+        posts: userPosts.length
+      });
+
+      // Load assigned therapist for students
+      if (user.therapistId) {
+        const therapist = usersAPI.getById(user.therapistId);
+        setAssignedTherapist(therapist);
+      }
+
+      // Load notifications
+      const userNotifications = notificationsAPI.getUserNotifications(user.id);
+      setNotifications(userNotifications);
+
+      // Load upcoming sessions
+      const upcoming = userAppointments
+        .filter(a => new Date(a.date + 'T' + a.time) > new Date() && a.status === 'confirmed')
+        .slice(0, 3);
+      setUpcomingSessions(upcoming);
+
+      // Load report summary
+      const pending = userReports.filter(r => (r.status || 'active') === 'pending').length;
+      const resolved = userReports.filter(r => (r.status || 'active') === 'resolved').length;
+      const urgent = userReports.filter(r => (r.severity || r.priority) === 'high' && (r.status || 'active') !== 'resolved').length;
+      setReportSummary({ pending, resolved, urgent });
     }
-    // Load notifications
-    const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    const userNotifications = allNotifications.filter(n => n.userId === user.id);
-    setNotifications(userNotifications);
-    // Load upcoming sessions
-    const upcoming = appointments.filter(a => new Date(a.startTime) > new Date() && a.status === 'confirmed').slice(0, 3);
-    setUpcomingSessions(upcoming);
-    // Load report summary
-    const pending = reports.filter(r => r.status === 'pending').length;
-    const resolved = reports.filter(r => r.status === 'resolved').length;
-    const urgent = reports.filter(r => r.severity === 'high' && r.status !== 'resolved').length;
-    setReportSummary({ pending, resolved, urgent });
-    // Load announcements
+
+    // Load announcements (keeping in localStorage for now as it's not part of main data)
     let ann = JSON.parse(localStorage.getItem('announcements') || '[]');
     if (ann.length === 0) {
       ann = [
@@ -222,12 +242,18 @@ const Dashboard = () => {
         navigate('/admin-dashboard');
         return null;
       case 'security':
-        const allReports = JSON.parse(localStorage.getItem('reports') || '[]');
+        const allReportsData = reportsAPI.getAll();
+        const allReports = [
+          ...Object.values(allReportsData.incident_reports || {}),
+          ...Object.values(allReportsData.security_reports || {}),
+          ...Object.values(allReportsData.missing_person_reports || {})
+        ];
+        const pendingReports = allReports.filter(r => (r.status || 'active') === 'pending').length;
+        const inProgressReports = allReports.filter(r => (r.status || 'active') === 'in_progress').length;
+        const resolvedReports = allReports.filter(r => (r.status || 'active') === 'resolved').length;
+        const urgentReports = allReports.filter(r => (r.severity || r.priority) === 'high' && (r.status || 'active') !== 'resolved').length;
+        // For now, keeping panic alerts and walk with me in localStorage as they're not in the main data model
         const panicAlerts = JSON.parse(localStorage.getItem('panicAlerts') || '[]');
-        const pendingReports = allReports.filter(r => r.status === 'pending').length;
-        const inProgressReports = allReports.filter(r => r.status === 'in_progress').length;
-        const resolvedReports = allReports.filter(r => r.status === 'resolved').length;
-        const urgentReports = allReports.filter(r => r.severity === 'high' && r.status !== 'resolved').length;
         const activeAlerts = panicAlerts.filter(a => a.status === 'active').length;
         const walkWithMeRequests = JSON.parse(localStorage.getItem('walkWithMe') || '[]').filter(w => w.active).length;
 
@@ -276,9 +302,9 @@ const Dashboard = () => {
             <ul>
               {allReports.slice(-5).reverse().map(r => (
                 <li key={r.id}>
-                  <strong>{r.type}</strong> - {r.status}
-                  {r.severity === 'high' && <span style={{color: 'red'}}> (URGENT)</span>}
-                  {!r.anonymous && r.reporterName && <span> - {r.reporterName}</span>}
+                  <strong>{r.type || 'Missing Person'}</strong> - {r.status || 'active'}
+                  {(r.severity || r.priority) === 'high' && <span style={{color: 'red'}}> (URGENT)</span>}
+                  {r.reportedBy && <span> - {r.reportedBy}</span>}
                 </li>
               ))}
             </ul>

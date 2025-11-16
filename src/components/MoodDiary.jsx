@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { moodAPI } from '../services/dataService.js';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -37,8 +38,8 @@ const MoodDiary = () => {
   const [badges, setBadges] = useState([]);
 
   useEffect(() => {
-    // Load mood entries from localStorage
-    const stored = JSON.parse(localStorage.getItem(`moodEntries_${user.id}`) || '[]');
+    // Load mood entries from data service
+    const stored = moodAPI.getUserEntries(user.id);
     setMoodEntries(stored);
 
     // Calculate streak
@@ -47,7 +48,7 @@ const MoodDiary = () => {
     const hasEntryToday = stored.some(e => new Date(e.date).toDateString() === today);
     const hasEntryYesterday = stored.some(e => new Date(e.date).toDateString() === yesterday);
 
-    let currentStreak = parseInt(localStorage.getItem(`moodStreak_${user.id}`) || '0');
+    let currentStreak = parseInt(moodAPI.getStreak(user.id) || '0');
     if (hasEntryToday) {
       if (hasEntryYesterday) {
         currentStreak += 1;
@@ -58,17 +59,24 @@ const MoodDiary = () => {
       currentStreak = 0;
     }
     setStreak(currentStreak);
-    localStorage.setItem(`moodStreak_${user.id}`, currentStreak.toString());
+    moodAPI.updateStreak(user.id, currentStreak);
 
     // Load badges
-    const userBadges = JSON.parse(localStorage.getItem(`badges_${user.id}`) || '[]');
+    const userBadges = moodAPI.getBadges(user.id);
     setBadges(userBadges);
   }, [user.id]);
 
   const saveEntry = () => {
-    const newEntries = [...moodEntries.filter(e => e.date !== currentEntry.date), currentEntry];
+    const entry = {
+      ...currentEntry,
+      id: Date.now().toString(),
+      userId: user.id,
+      createdAt: new Date().toISOString()
+    };
+
+    moodAPI.saveEntry(entry);
+    const newEntries = [...moodEntries.filter(e => e.date !== currentEntry.date), entry];
     setMoodEntries(newEntries);
-    localStorage.setItem(`moodEntries_${user.id}`, JSON.stringify(newEntries));
 
     // Award badges
     const newBadges = [...badges];
@@ -82,7 +90,7 @@ const MoodDiary = () => {
       newBadges.push('streak-champion');
     }
     setBadges(newBadges);
-    localStorage.setItem(`badges_${user.id}`, JSON.stringify(newBadges));
+    moodAPI.updateBadges(user.id, newBadges);
 
     alert('Mood entry saved!');
   };

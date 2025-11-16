@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { reportsAPI, notificationsAPI, usersAPI } from '../services/dataService.js';
 
 const ReportForm = () => {
   const [formData, setFormData] = useState({
@@ -97,19 +98,30 @@ const ReportForm = () => {
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
-    const reports = JSON.parse(localStorage.getItem('reports') || '[]');
-    reports.push(report);
-    localStorage.setItem('reports', JSON.stringify(reports));
+
+    // Save report using data service
+    reportsAPI.createIncidentReport(report);
+
     // Add notification
-    const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    notifications.push({
+    const notification = {
       id: Date.now().toString(),
       userId: user?.id,
+      type: 'report_update',
+      title: 'Report Submitted',
       message: 'Your safety report has been submitted and is under review.',
-      date: new Date().toISOString(),
-      type: 'report'
-    });
-    localStorage.setItem('notifications', JSON.stringify(notifications));
+      priority: 'medium',
+      category: 'reports',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      actionUrl: `/reports/incident/${report.id}`,
+      metadata: {
+        reportId: report.id,
+        status: 'pending'
+      }
+    };
+    notificationsAPI.create(notification);
+
     alert('Report submitted successfully!');
     navigate('/dashboard');
   };

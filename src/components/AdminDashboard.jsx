@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { usersAPI, forumAPI, therapyAPI, reportsAPI, notificationsAPI, moodAPI } from '../services/dataService.js';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -48,20 +49,22 @@ const AdminDashboard = () => {
   }, [users, searchTerm, userFilter]);
 
   const loadData = () => {
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const allUsers = Object.values(usersAPI.getAll());
     setUsers(allUsers);
     const therapistUsers = allUsers.filter(u => u.role === 'therapist');
     setTherapists(therapistUsers);
 
-    const forumPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
+    const forumPosts = Object.values(forumAPI.getAllPosts());
     // Add author names to posts for display
     const postsWithAuthors = forumPosts.map(post => ({
       ...post,
       author: post.isAnonymous ? 'Anonymous' : (allUsers.find(u => u.id === post.authorId)?.name || 'Unknown User'),
-      content: post.body, // Map body to content for consistency
-      timestamp: post.createdAt // Map createdAt to timestamp for consistency
+      content: post.body || post.content, // Handle both body and content fields
+      timestamp: post.createdAt || post.timestamp // Handle both createdAt and timestamp fields
     }));
     setPosts(postsWithAuthors);
+
+    // Resources are not in the main data model yet, so keep using localStorage for now
     setResources(JSON.parse(localStorage.getItem('resources') || '[]'));
     setSystemSettings(JSON.parse(localStorage.getItem('systemSettings') || '{}'));
     setAuditLogs(JSON.parse(localStorage.getItem('auditLogs') || '[]'));
@@ -146,13 +149,14 @@ const AdminDashboard = () => {
     const userData = {
       ...newUser,
       id: Date.now().toString(),
-      created_at: new Date().toISOString(),
-      suspended: false
+      createdAt: new Date().toISOString(),
+      suspended: false,
+      isActive: true
     };
 
-    const updatedUsers = [...users, userData];
+    usersAPI.create(userData);
+    const updatedUsers = Object.values(usersAPI.getAll());
     setUsers(updatedUsers);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
 
     logAuditAction('CREATE_USER', `Created user: ${userData.name} (${userData.role})`);
 
@@ -167,13 +171,11 @@ const AdminDashboard = () => {
   };
 
   const handleUpdateUser = (userId, updates) => {
-    const updatedUsers = users.map(u =>
-      u.id === userId ? { ...u, ...updates } : u
-    );
+    usersAPI.update(userId, updates);
+    const updatedUsers = Object.values(usersAPI.getAll());
     setUsers(updatedUsers);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
 
-    const updatedUser = updatedUsers.find(u => u.id === userId);
+    const updatedUser = usersAPI.getById(userId);
     logAuditAction('UPDATE_USER', `Updated user: ${updatedUser.name} - ${Object.keys(updates).join(', ')}`);
   };
 
@@ -183,10 +185,10 @@ const AdminDashboard = () => {
       return;
     }
 
-    const userToDelete = users.find(u => u.id === userId);
-    const updatedUsers = users.filter(u => u.id !== userId);
+    const userToDelete = usersAPI.getById(userId);
+    usersAPI.delete(userId);
+    const updatedUsers = Object.values(usersAPI.getAll());
     setUsers(updatedUsers);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
 
     logAuditAction('DELETE_USER', `Deleted user: ${userToDelete.name} - Reason: ${deleteReason}`);
     setDeleteReason('');
@@ -277,20 +279,21 @@ const AdminDashboard = () => {
 
     const suspendedUsers = users.filter(u => u.suspended).length;
     const recentSignups = users.filter(u => {
-      const signupDate = new Date(u.created_at);
+      const signupDate = new Date(u.createdAt || u.created_at);
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       return signupDate > weekAgo;
     }).length;
 
     // Mental health specific analytics
-    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+    const appointments = Object.values(therapyAPI.getAllAppointments());
     const therapistSessions = appointments.length;
+
+    // AI chats not in main data model yet, keep using localStorage
     const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
     const aiConversations = aiChats.length;
-    const moodEntries = users.filter(u => u.role === 'student').reduce((sum, user) => {
-      const entries = JSON.parse(localStorage.getItem(`moodEntries_${user.id}`) || '[]');
-      return sum + entries.length;
-    }, 0);
+
+    // Mood entries from data service
+    const moodEntries = Object.values(moodAPI.getAll()).length;
 
     return { totalUsers, usersByRole, suspendedUsers, recentSignups, therapistSessions, aiConversations, moodEntries };
   };

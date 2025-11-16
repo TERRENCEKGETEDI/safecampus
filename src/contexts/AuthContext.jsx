@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import CryptoJS from 'crypto-js';
-import { sampleUsers, sampleForumPosts, sampleComments, additionalAppointments, appointments } from '../components/counselingData.js';
+import { usersAPI, forumAPI, therapyAPI } from '../services/dataService.js';
 
 const AuthContext = createContext({
   user: null,
@@ -31,11 +30,8 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Too many login attempts. Please try again later.');
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const hashedPassword = hashPassword(password);
-    console.log('Login attempt:', email, 'Hashed password:', hashedPassword);
-    const user = users.find(u => u.email === email && u.password === hashedPassword);
-    console.log('Found user:', user ? user.name : 'none');
+    const user = usersAPI.authenticate(email, password);
+    console.log('Login attempt:', email, 'Found user:', user ? user.name : 'none');
 
     // Log attempt
     attempts.push({
@@ -49,33 +45,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Initialize sample users if not present or if passwords don't match (force update)
-    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const needsUpdate = existingUsers.length === 0 ||
-      !existingUsers.some(u => u.password === '396ce936e73c0cd7e270f1a827dc8d5e6cb11385e20e3bfc1d0ea623c135de3e');
-
-    if (needsUpdate) {
-      localStorage.setItem('users', JSON.stringify(sampleUsers));
-    }
-
-    // Initialize forum posts if not present
-    const existingPosts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
-    if (existingPosts.length === 0) {
-      localStorage.setItem('forumPosts', JSON.stringify(sampleForumPosts));
-    }
-
-    // Initialize comments if not present
-    const existingComments = JSON.parse(localStorage.getItem('comments') || '[]');
-    if (existingComments.length === 0) {
-      localStorage.setItem('comments', JSON.stringify(sampleComments));
-    }
-
-    // Initialize appointments if not present
-    const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
-    if (existingAppointments.length === 0) {
-      localStorage.setItem('appointments', JSON.stringify([...appointments, ...additionalAppointments]));
-    }
-
+    // Data initialization is now handled by the data service
+    // Check for existing session
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     const sessionExpiry = localStorage.getItem('sessionExpiry');
@@ -96,16 +67,9 @@ export const AuthProvider = ({ children }) => {
     setToken(tokenData);
     localStorage.setItem('token', tokenData);
     localStorage.setItem('user', JSON.stringify(userData));
-    // Record login activity
-    const activity = JSON.parse(localStorage.getItem(`loginActivity_${userData.id}`) || '[]');
-    const loginEntry = {
-      timestamp: new Date().toISOString(),
-      ip: '192.168.1.' + Math.floor(Math.random() * 255),
-      device: navigator.userAgent,
-      location: 'Johannesburg, South Africa' // Mock location
-    };
-    activity.push(loginEntry);
-    localStorage.setItem(`loginActivity_${userData.id}`, JSON.stringify(activity));
+    // Set session expiry (24 hours from now)
+    const sessionExpiry = Date.now() + (24 * 60 * 60 * 1000);
+    localStorage.setItem('sessionExpiry', sessionExpiry.toString());
   };
 
   const logout = () => {
