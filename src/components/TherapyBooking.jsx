@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { therapists as dataTherapists } from './counselingData.js';
 
-const TherapyBooking = () => {
+const SupportServices = () => {
   const { user } = useAuth();
   const [therapists, setTherapists] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -76,7 +76,7 @@ const TherapyBooking = () => {
     notifications.push({
       id: Date.now().toString(),
       userId: user.id,
-      message: `Therapy session booked for ${new Date(appointment.startTime).toLocaleString()}`,
+      message: `Support session booked for ${new Date(appointment.startTime).toLocaleString()}`,
       date: new Date().toISOString(),
       type: 'appointment'
     });
@@ -101,12 +101,12 @@ const TherapyBooking = () => {
 
   return (
     <div>
-      <h2>Therapy Booking</h2>
+      <h2>Support Services Booking</h2>
       <div>
-        <h3>Book New Session</h3>
+        <h3>Book New Support Session</h3>
         <div>
           <select value={selectedTherapist} onChange={(e) => { setSelectedTherapist(e.target.value); validateField('selectedTherapist', e.target.value); }}>
-            <option value="">Select Therapist</option>
+            <option value="">Select Support Specialist</option>
             {therapists.map(t => (
               <option key={t.id} value={t.id}>{t.name} - {t.specialty}</option>
             ))}
@@ -128,7 +128,7 @@ const TherapyBooking = () => {
         <button onClick={handleBook} disabled={!isFormValid()}>Book</button>
       </div>
       <div>
-        <h3>My Appointments</h3>
+        <h3>My Support Sessions</h3>
         <ul>
           {appointments.map(a => (
             <li key={a.id}>
@@ -146,4 +146,4 @@ const TherapyBooking = () => {
   );
 };
 
-export default TherapyBooking;
+export default SupportServices;

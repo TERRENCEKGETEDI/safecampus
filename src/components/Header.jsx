@@ -32,7 +32,7 @@ const Header = () => {
           { to: '/report', label: 'Report GBV' },
           { to: '/missing-report', label: 'Report Missing Person', highlight: true },
           { to: '/reports', label: 'My Reports' },
-          { to: '/therapy', label: 'Book Therapy' },
+          { to: '/therapy', label: 'Access Support' },
           { to: '/forum', label: 'Community Forum' },
           { to: '/map', label: 'Safety Map' },
           { to: '/chatbot', label: 'AI Assistant' },

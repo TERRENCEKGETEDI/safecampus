@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { usersAPI } from '../services/dataService.js';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -45,14 +46,14 @@ const Profile = () => {
         bio: user.bio || '',
       });
       // Load therapists
-      const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const therapistList = allUsers.filter(u => u.role === 'therapist');
+      const allUsers = usersAPI.getAll();
+      const therapistList = Object.values(allUsers).filter(u => u.role === 'therapist');
       setTherapists(therapistList);
       if (user.role === 'student' && user.therapistId) {
-        const therapist = allUsers.find(u => u.id === user.therapistId);
+        const therapist = usersAPI.getById(user.therapistId);
         setAssignedTherapist(therapist);
       }
-      // Load login activity
+      // Load login activity (keeping in localStorage for now as it's not part of main data model)
       const activity = JSON.parse(localStorage.getItem(`loginActivity_${user.id}`) || '[]');
       setLoginActivity(activity);
     }
@@ -95,31 +96,25 @@ const Profile = () => {
 
   const handleUpdate = () => {
     if (!validateProfile()) return;
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map(u => u.id === user.id ? { ...u, ...formData } : u);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    usersAPI.update(user.id, formData);
     alert('Profile updated');
   };
 
   const handleChangePassword = () => {
     if (!validatePassword()) return;
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentUser = users.find(u => u.id === user.id);
+    const currentUser = usersAPI.getById(user.id);
     if (currentUser.password !== changePassword.current) {
       alert('Current password is incorrect');
       return;
     }
-    const updatedUsers = users.map(u => u.id === user.id ? { ...u, password: changePassword.new } : u);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    usersAPI.update(user.id, { password: changePassword.new });
     setChangePassword({ current: '', new: '', confirm: '' });
     setPasswordErrors({});
     alert('Password changed successfully');
   };
 
   const saveTrustedCircle = (newCircle) => {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map(u => u.id === user.id ? { ...u, trustedCircle: newCircle } : u);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    usersAPI.update(user.id, { trustedCircle: newCircle });
     setFormData({ ...formData, trustedCircle: newCircle });
   };
 
@@ -133,9 +128,7 @@ const Profile = () => {
 
   const handleDeleteAccount = () => {
     if (confirm('Are you sure you want to delete your account?')) {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const updatedUsers = users.filter(u => u.id !== user.id);
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      usersAPI.delete(user.id);
       logout();
     }
   };
@@ -396,7 +389,7 @@ const Profile = () => {
           ))}
         </ul>
         {user.role === 'student' && formData.therapistId && (
-          <p>Assigned Therapist: {therapists.find(t => t.id === formData.therapistId)?.name} ({therapists.find(t => t.id === formData.therapistId)?.email})</p>
+          <p>Assigned Support Specialist: {therapists.find(t => t.id === formData.therapistId)?.name} ({therapists.find(t => t.id === formData.therapistId)?.email})</p>
         )}
       </div>
       <button onClick={handleDeleteAccount} style={{ backgroundColor: 'red' }}>Delete Account</button>

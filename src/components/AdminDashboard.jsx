@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { usersAPI, forumAPI, therapyAPI, reportsAPI, notificationsAPI, moodAPI } from '../services/dataService.js';
+import {
+  usersAPI,
+  forumAPI,
+  therapyAPI,
+  reportsAPI,
+  notificationsAPI,
+  moodAPI,
+  resourcesAPI,
+  systemSettingsAPI,
+  auditLogsAPI,
+  categoriesAPI,
+  loginAttemptsAPI,
+  flaggedActivitiesAPI,
+  aiChatsAPI
+} from '../services/dataService.js';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -64,17 +78,16 @@ const AdminDashboard = () => {
     }));
     setPosts(postsWithAuthors);
 
-    // Resources are not in the main data model yet, so keep using localStorage for now
-    setResources(JSON.parse(localStorage.getItem('resources') || '[]'));
-    setSystemSettings(JSON.parse(localStorage.getItem('systemSettings') || '{}'));
-    setAuditLogs(JSON.parse(localStorage.getItem('auditLogs') || '[]'));
+    // Load resources, system settings, and audit logs
+    setResources(resourcesAPI.getAll());
+    setSystemSettings(systemSettingsAPI.getAll());
+    setAuditLogs(auditLogsAPI.getAll());
 
     // Load categories
-    const allCategories = JSON.parse(localStorage.getItem('categories') || '["stress", "depression", "study", "relationships", "anxiety", "sleep", "self-esteem"]');
-    setCategories(allCategories);
+    setCategories(categoriesAPI.getAll());
 
     // Load login attempts (mock data)
-    const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '[]');
+    let attempts = loginAttemptsAPI.getAll();
     if (attempts.length === 0) {
       // Generate mock login attempts
       const mockAttempts = [];
@@ -87,20 +100,20 @@ const AdminDashboard = () => {
           ip: `192.168.1.${Math.floor(Math.random() * 255)}`
         });
       }
-      localStorage.setItem('loginAttempts', JSON.stringify(mockAttempts));
+      loginAttemptsAPI.add(mockAttempts);
       setLoginAttempts(mockAttempts);
     } else {
       setLoginAttempts(attempts);
     }
 
     // Load flagged activities (mock data)
-    const flagged = JSON.parse(localStorage.getItem('flaggedActivities') || '[]');
+    let flagged = flaggedActivitiesAPI.getAll();
     if (flagged.length === 0) {
       const mockFlagged = [
         { id: '1', type: 'post', content: 'Inappropriate content in forum', userId: allUsers[0]?.id, timestamp: new Date().toISOString(), status: 'pending' },
         { id: '2', type: 'chat', content: 'Potential self-harm indicators', userId: allUsers[1]?.id, timestamp: new Date().toISOString(), status: 'reviewed' }
       ];
-      localStorage.setItem('flaggedActivities', JSON.stringify(mockFlagged));
+      flaggedActivitiesAPI.add(mockFlagged);
       setFlaggedActivities(mockFlagged);
     } else {
       setFlaggedActivities(flagged);
@@ -135,9 +148,8 @@ const AdminDashboard = () => {
       timestamp: new Date().toISOString()
     };
 
-    const updatedLogs = [logEntry, ...auditLogs];
+    const updatedLogs = auditLogsAPI.add(logEntry);
     setAuditLogs(updatedLogs);
-    localStorage.setItem('auditLogs', JSON.stringify(updatedLogs));
   };
 
   const handleCreateUser = () => {
@@ -200,21 +212,16 @@ const AdminDashboard = () => {
 
   const handleDeletePost = (postId) => {
     const post = posts.find(p => p.id === postId);
-    const updatedPosts = posts.filter(p => p.id !== postId);
-    setPosts(updatedPosts);
-
-    // Save back to localStorage in original format (without author and content properties)
-    const originalPosts = updatedPosts.map(p => ({
-      id: p.id,
-      title: p.title,
-      body: p.content, // Map back to body
-      isAnonymous: p.isAnonymous,
-      category: p.category,
-      authorId: p.authorId,
-      createdAt: p.timestamp, // Map back to createdAt
-      likes: p.likes || 0
+    forumAPI.deletePost(postId);
+    const updatedPosts = Object.values(forumAPI.getAllPosts());
+    // Add author names to posts for display
+    const postsWithAuthors = updatedPosts.map(post => ({
+      ...post,
+      author: post.isAnonymous ? 'Anonymous' : (Object.values(usersAPI.getAll()).find(u => u.id === post.authorId)?.name || 'Unknown User'),
+      content: post.body || post.content,
+      timestamp: post.createdAt || post.timestamp
     }));
-    localStorage.setItem('forumPosts', JSON.stringify(originalPosts));
+    setPosts(postsWithAuthors);
 
     logAuditAction('DELETE_POST', `Deleted forum post: ${post.title}`);
   };
@@ -233,9 +240,9 @@ const AdminDashboard = () => {
       views: 0
     };
 
-    const updatedResources = [...resources, resourceData];
+    resourcesAPI.create(resourceData);
+    const updatedResources = resourcesAPI.getAll();
     setResources(updatedResources);
-    localStorage.setItem('resources', JSON.stringify(updatedResources));
 
     logAuditAction('CREATE_RESOURCE', `Created resource: ${resourceData.title}`);
 
@@ -250,20 +257,17 @@ const AdminDashboard = () => {
   };
 
   const handleFeatureResource = (resourceId, featured) => {
-    const updatedResources = resources.map(r =>
-      r.id === resourceId ? { ...r, featured } : r
-    );
+    resourcesAPI.update(resourceId, { featured });
+    const updatedResources = resourcesAPI.getAll();
     setResources(updatedResources);
-    localStorage.setItem('resources', JSON.stringify(updatedResources));
 
     const resource = resources.find(r => r.id === resourceId);
     logAuditAction('UPDATE_RESOURCE', `${featured ? 'Featured' : 'Unfeatured'} resource: ${resource.title}`);
   };
 
   const handleUpdateSystemSettings = (settings) => {
-    const updatedSettings = { ...systemSettings, ...settings };
+    const updatedSettings = systemSettingsAPI.update(settings);
     setSystemSettings(updatedSettings);
-    localStorage.setItem('systemSettings', JSON.stringify(updatedSettings));
 
     logAuditAction('UPDATE_SETTINGS', `Updated system settings: ${Object.keys(settings).join(', ')}`);
   };
@@ -288,9 +292,8 @@ const AdminDashboard = () => {
     const appointments = Object.values(therapyAPI.getAllAppointments());
     const therapistSessions = appointments.length;
 
-    // AI chats not in main data model yet, keep using localStorage
-    const aiChats = JSON.parse(localStorage.getItem('aiChats') || '[]');
-    const aiConversations = aiChats.length;
+    // AI conversations
+    const aiConversations = aiChatsAPI.getAll().length;
 
     // Mood entries from data service
     const moodEntries = Object.values(moodAPI.getAll()).length;
@@ -802,14 +805,24 @@ const AdminDashboard = () => {
             <button onClick={() => {
               const message = prompt('Notification message:');
               if (message) {
-                const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-                notifications.push({
+                const notification = {
                   id: Date.now().toString(),
+                  userId: 'all', // System notification for all users
+                  type: 'system_maintenance',
+                  title: 'System Notification',
                   message,
-                  date: new Date().toISOString(),
-                  type: 'system'
-                });
-                localStorage.setItem('notifications', JSON.stringify(notifications));
+                  priority: 'low',
+                  category: 'system',
+                  isRead: false,
+                  createdAt: new Date().toISOString(),
+                  expiresAt: null,
+                  actionUrl: null,
+                  metadata: {
+                    sentBy: user.id,
+                    sentAt: new Date().toISOString()
+                  }
+                };
+                notificationsAPI.create(notification);
                 alert('System notification sent to all users');
               }
             }}>
@@ -889,11 +902,9 @@ const AdminDashboard = () => {
                   <p>Time: {new Date(activity.timestamp).toLocaleString()}</p>
                   <p>Status: {activity.status}</p>
                   <button onClick={() => {
-                    const updated = flaggedActivities.map(a =>
-                      a.id === activity.id ? { ...a, status: 'reviewed' } : a
-                    );
+                    flaggedActivitiesAPI.update(activity.id, { status: 'reviewed' });
+                    const updated = flaggedActivitiesAPI.getAll();
                     setFlaggedActivities(updated);
-                    localStorage.setItem('flaggedActivities', JSON.stringify(updated));
                   }}>
                     Mark as Reviewed
                   </button>

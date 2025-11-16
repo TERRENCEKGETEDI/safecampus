@@ -375,3 +375,76 @@ export const securityAPI = {
     return null;
   }
 };
+
+export const resourcesAPI = {
+  getAll: () => dataService.getAll('resources') || [],
+  create: (resource) => dataService.create('resources', resource),
+  update: (id, updates) => dataService.update('resources', `resources.${id}`, updates),
+  delete: (id) => dataService.delete('resources', `resources.${id}`)
+};
+
+export const systemSettingsAPI = {
+  getAll: () => dataService.getAll('system_settings') || {},
+  update: (settings) => {
+    const current = dataService.getAll('system_settings') || {};
+    const updated = { ...current, ...settings };
+    dataService.setByPath('system_settings', '', updated);
+    return updated;
+  }
+};
+
+export const auditLogsAPI = {
+  getAll: () => dataService.getAll('audit_logs') || [],
+  add: (log) => {
+    const current = dataService.getAll('audit_logs') || [];
+    const updated = [log, ...current];
+    dataService.setByPath('audit_logs', '', updated);
+    return updated;
+  }
+};
+
+export const categoriesAPI = {
+  getAll: () => dataService.getAll('categories') || ["stress", "depression", "study", "relationships", "anxiety", "sleep", "self-esteem"],
+  update: (categories) => {
+    dataService.setByPath('categories', '', categories);
+    return categories;
+  }
+};
+
+export const loginAttemptsAPI = {
+  getAll: () => dataService.getAll('login_attempts') || [],
+  add: (attempt) => {
+    const current = dataService.getAll('login_attempts') || [];
+    const updated = [...current, attempt];
+    dataService.setByPath('login_attempts', '', updated);
+    return updated;
+  }
+};
+
+export const flaggedActivitiesAPI = {
+  getAll: () => dataService.getAll('flagged_activities') || [],
+  add: (activity) => {
+    const current = dataService.getAll('flagged_activities') || [];
+    const updated = [...current, activity];
+    dataService.setByPath('flagged_activities', '', updated);
+    return updated;
+  },
+  update: (id, updates) => {
+    const current = dataService.getAll('flagged_activities') || [];
+    const updated = current.map(activity =>
+      activity.id === id ? { ...activity, ...updates } : activity
+    );
+    dataService.setByPath('flagged_activities', '', updated);
+    return updated;
+  }
+};
+
+export const aiChatsAPI = {
+  getAll: () => dataService.getAll('ai_chats') || [],
+  add: (chat) => {
+    const current = dataService.getAll('ai_chats') || [];
+    const updated = [...current, chat];
+    dataService.setByPath('ai_chats', '', updated);
+    return updated;
+  }
+};

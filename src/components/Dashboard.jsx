@@ -64,8 +64,8 @@ const Dashboard = () => {
     let ann = JSON.parse(localStorage.getItem('announcements') || '[]');
     if (ann.length === 0) {
       ann = [
-        { title: 'Safety Workshop', message: 'Join us for a safety awareness workshop on Friday.' },
-        { title: 'Mental Health Day', message: 'Mental Health Awareness Day is coming up. Resources available.' }
+        { title: 'Safety Workshop', message: 'Join us for a GBV prevention and safety awareness workshop on Friday.' },
+        { title: '16 Days of Activism', message: '16 Days of Activism Against Gender-Based Violence campaign is underway. Resources and support available.' }
       ];
       localStorage.setItem('announcements', JSON.stringify(ann));
     }
@@ -107,14 +107,14 @@ const Dashboard = () => {
             <Link to="/report">Submit GBV Report</Link>
             <Link to="/missing-report">Report Missing Person</Link>
             <Link to="/reports">View Reports</Link>
-            <Link to="/therapy">Book Therapy</Link>
-            <Link to="/mood-diary">Mood Diary</Link>
-            <Link to="/self-help">Self-Help Library</Link>
+            <Link to="/therapy">Access Support Services</Link>
+            <Link to="/mood-diary">Safety Journal</Link>
+            <Link to="/self-help">Support Resources</Link>
             <Link to="/emergency">Emergency Support</Link>
-            <Link to="/forum">Forum</Link>
+            <Link to="/forum">Community Forum</Link>
             <Link to="/map">Safety Map</Link>
             <Link to="/profile">Profile</Link>
-            <Link to="/chatbot">Chatbot</Link>
+            <Link to="/chatbot">Support Chat</Link>
             <Link to="/help">Help Center</Link>
           </>
         );
@@ -174,15 +174,15 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="session-summary">
-              <h3>Upcoming Therapy Sessions</h3>
+              <h3>Upcoming Support Sessions</h3>
               {upcomingSessions.length > 0 ? (
                 <ul>
                   {upcomingSessions.map(a => (
-                    <li key={a.id}>{new Date(a.startTime).toLocaleString()} - {a.mode}</li>
+                    <li key={a.id}>{new Date(a.date + 'T' + a.time).toLocaleString()} - {a.reason || 'Support Session'}</li>
                   ))}
                 </ul>
               ) : (
-                <p>No upcoming sessions.</p>
+                <p>No upcoming support sessions.</p>
               )}
             </div>
             <div className="report-summary">
@@ -232,7 +232,7 @@ const Dashboard = () => {
                 <p>No new notifications.</p>
               )}
               {assignedTherapist && (
-                <p>Assigned Therapist: {assignedTherapist.name} ({assignedTherapist.email})</p>
+                <p>Assigned Support Specialist: {assignedTherapist.name} ({assignedTherapist.email})</p>
               )}
             </div>
           </>

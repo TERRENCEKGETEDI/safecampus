@@ -23,15 +23,15 @@ ChartJS.register(
   Legend
 );
 
-const MoodDiary = () => {
+const SafetyJournal = () => {
   const { user } = useAuth();
   const [moodEntries, setMoodEntries] = useState([]);
   const [currentEntry, setCurrentEntry] = useState({
     date: new Date().toISOString().split('T')[0],
-    mood: 5,
-    energy: 5,
-    anxiety: 5,
-    stress: 5,
+    safety_level: 5,
+    confidence: 5,
+    support_needs: 5,
+    concerns: 5,
     notes: ''
   });
   const [streak, setStreak] = useState(0);
@@ -169,37 +169,37 @@ const MoodDiary = () => {
     labels: getLast7Days(),
     datasets: [
       {
-        label: 'Mood',
+        label: 'Safety Level',
         data: getLast7Days().map(date => {
           const entry = moodEntries.find(e => e.date === date);
-          return entry ? entry.mood : null;
+          return entry ? entry.safety_level : null;
         }),
         borderColor: 'rgb(75, 192, 192)',
         tension: 0.1,
       },
       {
-        label: 'Energy',
+        label: 'Confidence',
         data: getLast7Days().map(date => {
           const entry = moodEntries.find(e => e.date === date);
-          return entry ? entry.energy : null;
+          return entry ? entry.confidence : null;
         }),
         borderColor: 'rgb(255, 99, 132)',
         tension: 0.1,
       },
       {
-        label: 'Anxiety',
+        label: 'Support Needs',
         data: getLast7Days().map(date => {
           const entry = moodEntries.find(e => e.date === date);
-          return entry ? entry.anxiety : null;
+          return entry ? entry.support_needs : null;
         }),
         borderColor: 'rgb(54, 162, 235)',
         tension: 0.1,
       },
       {
-        label: 'Stress',
+        label: 'Concerns',
         data: getLast7Days().map(date => {
           const entry = moodEntries.find(e => e.date === date);
-          return entry ? entry.stress : null;
+          return entry ? entry.concerns : null;
         }),
         borderColor: 'rgb(255, 205, 86)',
         tension: 0.1,
@@ -215,7 +215,7 @@ const MoodDiary = () => {
       },
       title: {
         display: true,
-        text: 'Mood Tracking - Last 7 Days',
+        text: 'Safety Tracking - Last 7 Days',
       },
     },
     scales: {
@@ -227,48 +227,48 @@ const MoodDiary = () => {
   };
 
   return (
-    <div className="mood-diary">
-      <h2>Mental Health Diary</h2>
+    <div className="safety-journal">
+      <h2>Safety Journal</h2>
       <div className="diary-entry">
         <h3>Today's Entry</h3>
         <div className="slider-group">
-          <label>Mood: {getMoodEmoji(currentEntry.mood)} ({currentEntry.mood}/10)</label>
+          <label>Safety Level: {getMoodEmoji(currentEntry.safety_level)} ({currentEntry.safety_level}/10)</label>
           <input
             type="range"
             min="1"
             max="10"
-            value={currentEntry.mood}
-            onChange={(e) => setCurrentEntry({...currentEntry, mood: parseInt(e.target.value)})}
+            value={currentEntry.safety_level}
+            onChange={(e) => setCurrentEntry({...currentEntry, safety_level: parseInt(e.target.value)})}
           />
         </div>
         <div className="slider-group">
-          <label>Energy: {currentEntry.energy}/10</label>
+          <label>Confidence: {currentEntry.confidence}/10</label>
           <input
             type="range"
             min="1"
             max="10"
-            value={currentEntry.energy}
-            onChange={(e) => setCurrentEntry({...currentEntry, energy: parseInt(e.target.value)})}
+            value={currentEntry.confidence}
+            onChange={(e) => setCurrentEntry({...currentEntry, confidence: parseInt(e.target.value)})}
           />
         </div>
         <div className="slider-group">
-          <label>Anxiety: {currentEntry.anxiety}/10</label>
+          <label>Support Needs: {currentEntry.support_needs}/10</label>
           <input
             type="range"
             min="1"
             max="10"
-            value={currentEntry.anxiety}
-            onChange={(e) => setCurrentEntry({...currentEntry, anxiety: parseInt(e.target.value)})}
+            value={currentEntry.support_needs}
+            onChange={(e) => setCurrentEntry({...currentEntry, support_needs: parseInt(e.target.value)})}
           />
         </div>
         <div className="slider-group">
-          <label>Stress: {currentEntry.stress}/10</label>
+          <label>Concerns: {currentEntry.concerns}/10</label>
           <input
             type="range"
             min="1"
             max="10"
-            value={currentEntry.stress}
-            onChange={(e) => setCurrentEntry({...currentEntry, stress: parseInt(e.target.value)})}
+            value={currentEntry.concerns}
+            onChange={(e) => setCurrentEntry({...currentEntry, concerns: parseInt(e.target.value)})}
           />
         </div>
         <textarea
@@ -282,35 +282,35 @@ const MoodDiary = () => {
         <Line data={chartData} options={chartOptions} />
       </div>
       <div className="insights">
-        <h3>AI Mood Predictions & Insights</h3>
+        <h3>AI Safety Insights & Recommendations</h3>
         <div className="predictions">
           {generatePredictions()}
         </div>
         <div className="insights-content">
-          <p>Based on your recent entries, you might benefit from relaxation techniques. Consider trying deep breathing exercises.</p>
+          <p>Based on your recent entries, consider connecting with campus safety resources. Remember you can always reach out to support services for additional help.</p>
         </div>
         <div className="export-section">
           <button onClick={() => {
             const data = moodEntries.map(entry => ({
               date: entry.date,
-              mood: entry.mood,
-              energy: entry.energy,
-              anxiety: entry.anxiety,
-              stress: entry.stress,
+              safety_level: entry.safety_level,
+              confidence: entry.confidence,
+              support_needs: entry.support_needs,
+              concerns: entry.concerns,
               notes: entry.notes
             }));
             const csvContent = 'data:text/csv;charset=utf-8,' +
-              'Date,Mood,Energy,Anxiety,Stress,Notes\n' +
-              data.map(row => `${row.date},${row.mood},${row.energy},${row.anxiety},${row.stress},"${row.notes}"`).join('\n');
+              'Date,Safety Level,Confidence,Support Needs,Concerns,Notes\n' +
+              data.map(row => `${row.date},${row.safety_level},${row.confidence},${row.support_needs},${row.concerns},"${row.notes}"`).join('\n');
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement('a');
             link.setAttribute('href', encodedUri);
-            link.setAttribute('download', 'mood_tracking_data.csv');
+            link.setAttribute('download', 'safety_tracking_data.csv');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
           }}>
-            Export Mood Data (CSV)
+            Export Safety Data (CSV)
           </button>
         </div>
       </div>
@@ -318,4 +318,4 @@ const MoodDiary = () => {
   );
 };
 
-export default MoodDiary;
+export default SafetyJournal;
