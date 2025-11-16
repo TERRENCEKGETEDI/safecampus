@@ -85,7 +85,7 @@ main {
 }
 
 button {
-  background: var(--primary-gradient);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.1) 100%), var(--primary-gradient);
   color: var(--text-light);
   border: none;
   padding: var(--spacing-md) var(--spacing-xl);
@@ -95,7 +95,7 @@ button {
   font-weight: 600;
   font-size: 1rem;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
   position: relative;
   overflow: hidden;
 }
@@ -112,8 +112,8 @@ button::before {
 }
 
 button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 button:hover::before {
@@ -122,6 +122,7 @@ button:hover::before {
 
 button:active {
   transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 input, select, textarea {
@@ -225,6 +226,7 @@ label {
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
   position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .landing-nav a::after {
@@ -241,11 +243,17 @@ label {
 
 .landing-nav a:hover {
   color: #667eea;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 .landing-nav a:hover::after {
   width: 100%;
+}
+
+.landing-nav a:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .about, .contact {
@@ -542,6 +550,7 @@ label {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .tab-button::before {
@@ -557,20 +566,25 @@ label {
 }
 
 .tab-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
   border-color: #667eea;
 }
 
 .tab-button.active {
-  background: var(--primary-gradient);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.1) 100%), var(--primary-gradient);
   color: var(--text-light);
   border-color: #667eea;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .tab-button.active::before {
   left: 0;
+}
+
+.tab-button:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .tab-icon {
@@ -727,6 +741,7 @@ label {
   text-align: center;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .action-btn::before {
@@ -741,12 +756,17 @@ label {
 }
 
 .action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 .action-btn:hover::before {
   left: 100%;
+}
+
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .action-btn.primary {
@@ -879,13 +899,19 @@ form h2 {
   transition: all 0.3s ease;
   width: 100%;
   max-width: 300px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .secondary-btn:hover {
   background: var(--text-primary);
   color: var(--bg-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.secondary-btn:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .link-btn {
@@ -1016,21 +1042,21 @@ li {
   position: relative;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.1);
 }
 
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.25);
   border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 .nav-link.active {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   font-weight: 600;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 .nav-link.active::after {
@@ -1043,6 +1069,11 @@ li {
   height: 2px;
   background: var(--text-light);
   border-radius: 1px;
+}
+
+.nav-link:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .nav-link.highlight {
