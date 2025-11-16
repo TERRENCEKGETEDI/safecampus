@@ -6,6 +6,8 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [typingText, setTypingText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const chatBoxRef = useRef(null);
 
   const detectKeywords = (message) => {
@@ -37,6 +39,27 @@ const Chatbot = () => {
       }
     });
     return history;
+  };
+
+  const startTyping = (fullContent) => {
+    setIsTyping(true);
+    setTypingText('');
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < fullContent.text.length) {
+        setTypingText(prev => prev + fullContent.text[index]);
+        index++;
+        // Autoscroll to bottom during typing
+        if (chatBoxRef.current) {
+          chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+        }
+      } else {
+        clearInterval(interval);
+        setIsTyping(false);
+        const botMessage = { sender: 'AxonCare AI', content: fullContent, timestamp: new Date().toISOString() };
+        setMessages(prev => [...prev, botMessage]);
+      }
+    }, 25);
   };
 
   const getFallbackResponse = (message) => {
@@ -316,11 +339,9 @@ const Chatbot = () => {
     setInput('');
     setIsStreaming(true);
 
-    // Use fallback response immediately (no API call needed for production)
+    // Use fallback response with typing effect
     setTimeout(() => {
       const fallbackContent = getFallbackResponse(message);
-      const fallbackMessage = { sender: 'AxonCare AI', content: fallbackContent, timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, fallbackMessage]);
 
       // Store conversation for analytics and personalization
       const userId = JSON.parse(localStorage.getItem('user') || 'null')?.id;
@@ -334,7 +355,8 @@ const Chatbot = () => {
       localStorage.setItem('aiChats', JSON.stringify(aiChats));
 
       setIsStreaming(false);
-    }, 500); // Short delay for better UX
+      startTyping(fallbackContent);
+    }, 2000);
   };
 
   const handleKeyPress = (e) => {
@@ -449,6 +471,38 @@ const Chatbot = () => {
             </div>
           </div>
         ))}
+        {isTyping && (
+          <div
+            style={{
+              margin: '10px 0',
+              display: 'flex',
+              justifyContent: 'flex-start'
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  maxWidth: '80%',
+                  padding: '10px 15px',
+                  borderRadius: '20px',
+                  backgroundColor: '#f3e5f5',
+                  color: '#333',
+                  whiteSpace: 'pre-line',
+                  wordWrap: 'break-word'
+                }}
+              >
+                <strong style={{ fontSize: '0.9em', color: '#666' }}>
+                  AxonCare AI
+                </strong>
+                <div style={{ marginTop: '5px' }}>
+                  {typingText.split('**').map((part, index) =>
+                    index % 2 === 1 ? <strong key={index}>{part}</strong> : part
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <textarea
